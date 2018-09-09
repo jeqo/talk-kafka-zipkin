@@ -37,13 +37,13 @@ public class TwitterStreamProcessor {
     })
     .filterNot((k, v) -> Objects.isNull(v))
     .mapValues((k, v) -> parseTweet(v))
-    .to("twitter_avro_01");
+    .to("twitter_avro_v02");
 
     final Topology topology = builder.build();
 
     final Properties config = new Properties();
     config.setProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:29092");
-    config.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "stream-transform-v01");
+    config.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "stream-transform-v02");
     config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
     config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
     config.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://localhost:8081");
