@@ -32,6 +32,12 @@
             <artifactId>kafka-streams-avro-serde</artifactId>
             <version>5.0.0</version>
         </dependency>
+        <dependency>
+            <groupId>io.zipkin.reporter2</groupId>
+            <artifactId>zipkin-sender-kafka11</artifactId>
+            <version>2.7.7</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>

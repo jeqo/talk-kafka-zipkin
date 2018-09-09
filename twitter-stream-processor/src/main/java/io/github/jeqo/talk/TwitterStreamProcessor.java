@@ -1,16 +1,20 @@
 package io.github.jeqo.talk;
 
+import brave.Tracing;
+import brave.kafka.clients.KafkaTracing;
+import brave.kafka.streams.KafkaStreamsTracing;
+import brave.sampler.Sampler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.github.jeqo.talk.avro.Tweet;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.Consumed;
+import zipkin2.Span;
+import zipkin2.reporter.AsyncReporter;
+import zipkin2.reporter.kafka11.KafkaSender;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -44,7 +48,21 @@ public class TwitterStreamProcessor {
     config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
     config.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://localhost:8081");
 
-    KafkaStreams kafkaStreams = new KafkaStreams(topology, config);
+
+    /* START TRACING INSTRUMENTATION */
+    final KafkaSender sender = KafkaSender.newBuilder().bootstrapServers("localhost:29092").build();
+    final AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build();
+    final Tracing tracing =
+        Tracing.newBuilder()
+            .localServiceName("stream-transform")
+            .sampler(Sampler.ALWAYS_SAMPLE)
+            .spanReporter(reporter)
+            .build();
+    final KafkaTracing kafkaTracing = KafkaTracing.newBuilder(tracing).remoteServiceName("kafka").build();
+    /* END TRACING INSTRUMENTATION */
+
+    final KafkaClientSupplier clientSupplier = KafkaStreamsTracing.create(kafkaTracing).kafkaClientSupplier();
+    final KafkaStreams kafkaStreams = new KafkaStreams(topology, config, clientSupplier);
     kafkaStreams.start();
 
     Runtime.getRuntime().addShutdownHook(new Thread(kafkaStreams::close));
