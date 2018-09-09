@@ -27,17 +27,17 @@
         <dependency>
             <groupId>io.zipkin.brave</groupId>
             <artifactId>brave-instrumentation-jersey-server</artifactId>
-            <version>5.1.6-SNAPSHOT</version>
+            <version>${brave.version}</version>
         </dependency>
         <dependency>
             <groupId>io.zipkin.brave</groupId>
             <artifactId>brave-instrumentation-httpclient</artifactId>
-            <version>5.1.6-SNAPSHOT</version>
+            <version>${brave.version}</version>
         </dependency>
         <dependency>
             <groupId>io.zipkin.reporter2</groupId>
             <artifactId>zipkin-sender-kafka11</artifactId>
-            <version>2.7.8</version>
+            <version>${zipkin-reporter.version}</version>
         </dependency>
     </dependencies>
 

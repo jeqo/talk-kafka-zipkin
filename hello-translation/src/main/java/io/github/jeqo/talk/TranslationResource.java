@@ -10,6 +10,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Optional;
 
 @Path("translate")
 public class TranslationResource {
@@ -29,7 +30,7 @@ public class TranslationResource {
     /* START CUSTOM INSTRUMENTATION */
     final ScopedSpan span = tracer.startScopedSpan("query-repository");
     span.annotate("started-query");
-    span.tag("lang", lang);
+    span.tag("lang", Optional.ofNullable(lang).orElse(""));
     final String hello = repository.find(lang);
     span.annotate("finished-query");
     span.finish();
