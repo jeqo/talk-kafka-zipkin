@@ -80,3 +80,6 @@ Choreography view:
                |          |    +--------------+
                +----------+
 ```
+
+## Lab 3: Spigo Simulation
+
