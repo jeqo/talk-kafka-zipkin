@@ -1,13 +1,21 @@
 package io.github.jeqo.talk;
 
 import io.dropwizard.Application;
-import io.dropwizard.Configuration;
+import io.dropwizard.client.HttpClientBuilder;
 import io.dropwizard.setup.Environment;
+import org.apache.http.client.HttpClient;
 
-public class HelloServiceApplication extends Application<Configuration> {
+public class HelloServiceApplication extends Application<HelloServiceConfiguration> {
   @Override
-  public void run(Configuration configuration, Environment environment) {
-    final HelloResource helloResource = new HelloResource();
+  public void run(HelloServiceConfiguration configuration, Environment environment) {
+    final HttpClient httpClient =
+        new HttpClientBuilder(environment).using(configuration.getHttpClientConfiguration())
+            .build(getName());
+    final String url = configuration.getTranslationServiceUrl();
+    final HelloTranslationServiceClient translationServiceClient =
+        new HelloTranslationServiceClient(httpClient, url);
+
+    final HelloResource helloResource = new HelloResource(translationServiceClient);
     environment.jersey().register(helloResource);
 
     final HelloServiceHealthCheck helloServiceHealthCheck = new HelloServiceHealthCheck();
