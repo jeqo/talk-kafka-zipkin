@@ -48,6 +48,8 @@ to call Hello Service and produce events into a Kafka Topic.
 
 ## Lab 02: Twitter Kafka-based application
 
+Data-flow view
+
 ```
 +---------+   +-------------------+          +------------------+    +--------------+
 | Twitter |-->| Twitter Connector |-(Kafka)->| Stream Transform |-+->| DB Connector |
@@ -56,4 +58,25 @@ to call Hello Service and produce events into a Kafka Topic.
                                                                   |  +--------------+
                                                                   +->| Consumer App |
                                                                      +--------------+
+```
+
+Choreography view:
+
+```
+                  Kafka
+               +----------+
++---------+    |          |    +------------------+
+| Twitter |--->|          |--->|                  |
++---------+    |          |    | Stream Transform |
+               |          |<---|                  |
+               |          |    +------------------+
+               |          |
+               |          |    +--------------+
+               |          |--->| DB Connector |
+               |          |    +--------------+
+               |          |
+               |          |    +--------------+
+               |          |--->| DB Connector |
+               |          |    +--------------+
+               +----------+
 ```
