@@ -2,7 +2,6 @@ package io.github.jeqo.talk;
 
 import brave.Tracing;
 import brave.kafka.clients.KafkaTracing;
-import brave.propagation.B3SinglePropagation;
 import brave.sampler.Sampler;
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -27,7 +26,6 @@ public class HelloConsumer {
             .localServiceName("hello-consumer")
             .sampler(Sampler.ALWAYS_SAMPLE)
             .spanReporter(reporter)
-            .propagationFactory(B3SinglePropagation.FACTORY)
             .build();
     final KafkaTracing kafkaTracing = KafkaTracing.newBuilder(tracing).remoteServiceName("kafka").build();
     /* END TRACING INSTRUMENTATION */
@@ -42,7 +40,7 @@ public class HelloConsumer {
 
     tracingConsumer.subscribe(Collections.singletonList("hello"));
 
-    while (true) {
+    while (!Thread.interrupted()) {
       final ConsumerRecords<String, String> records = tracingConsumer.poll(Duration.ofMillis(Long.MAX_VALUE));
       for (ConsumerRecord<String, String> record : records) {
         brave.Span span = kafkaTracing.nextSpan(record).name("print-hello").start();
