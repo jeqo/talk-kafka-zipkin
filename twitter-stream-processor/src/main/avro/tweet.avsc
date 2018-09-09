@@ -1,0 +1,10 @@
+{
+    "namespace": "io.github.jeqo.talk.avro",
+    "type": "record",
+    "name": "Tweet",
+    "fields": [
+        {"name": "text", "type": "string"},
+        {"name": "username",  "type": "string"},
+        {"name": "lang", "type": ["string", "null"]}
+    ]
+}
