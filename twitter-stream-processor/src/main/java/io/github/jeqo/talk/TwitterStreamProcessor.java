@@ -37,7 +37,7 @@ public class TwitterStreamProcessor {
     })
     .filterNot((k, v) -> Objects.isNull(v))
     .mapValues((k, v) -> parseTweet(v))
-    .to("twitter_avro_v02");
+    .to("twitter_avro_v01");
 
     final Topology topology = builder.build();
 

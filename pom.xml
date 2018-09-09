@@ -13,6 +13,7 @@
     <module>hello-client</module>
     <module>hello-consumer</module>
     <module>twitter-stream-processor</module>
+    <module>twitter-console-consumer</module>
   </modules>
   <packaging>pom</packaging>
 
