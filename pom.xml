@@ -12,6 +12,7 @@
     <module>hello-translation</module>
     <module>hello-client</module>
     <module>hello-consumer</module>
+    <module>twitter-stream-processor</module>
   </modules>
   <packaging>pom</packaging>
 
