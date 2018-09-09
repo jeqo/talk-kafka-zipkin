@@ -38,6 +38,7 @@ public class HelloClient {
             .spanReporter(reporter)
             .build();
     final HttpTracing httpTracing = HttpTracing.newBuilder(tracing).build();
+    final KafkaTracing kafkaTracing = KafkaTracing.newBuilder(tracing).remoteServiceName("kafka").build();
     final Tracer tracer = Tracing.currentTracer();
     /* END TRACING INSTRUMENTATION */
 
@@ -48,7 +49,7 @@ public class HelloClient {
     producerConfigs.setProperty(KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
     producerConfigs.setProperty(VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
     final Producer<String, String> kafkaProducer = new KafkaProducer<>(producerConfigs);
-    final Producer<String, String> tracedKafkaProducer = KafkaTracing.create(tracing).producer(kafkaProducer);
+    final Producer<String, String> tracedKafkaProducer = kafkaTracing.producer(kafkaProducer);
 
     final List<String> names = Arrays.asList("Jorge", "Eliana", "Jon", "Robin", "Jun", "Neha");
 
