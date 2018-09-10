@@ -71,7 +71,7 @@ services:
     depends_on:
       - schema-registry
   jdbc-connect:
-    image: confluentinc/cp-kafka-connect:5.0.0
+    image: syscomiddleware/cp-kafka-connect:5.0.0
     ports:
       - 8084:8084
     environment:
