@@ -75,13 +75,13 @@ Choreography view:
                |          |<---|                  |
                |          |    +------------------+
                |          |
-               |          |    +--------------+
-               |          |--->| DB Connector |
-               |          |    +--------------+
+               |          |    +--------------+    +------------+
+               |          |--->| DB Connector |--->| Postgresql |
+               |          |    +--------------+    +------------+
                |          |
-               |          |    +--------------+
-               |          |--->| Consumer App |
-               |          |    +--------------+
+               |          |    +--------------+    +---------+
+               |          |--->| Consumer App |--->| Console |
+               |          |    +--------------+    +---------+
                +----------+
 ```
 
@@ -98,6 +98,13 @@ Choreography view:
 ## Lab 3: Spigo Simulation
 
 ### How to run it
+
+Clone Spigo project: 
+
+```
+git clone git@github.com:jeqo/spigo
+cd spigo
+```
 
 Visualize architectures on `json_arch/` dir and with UI:
 
