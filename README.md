@@ -28,6 +28,8 @@ a user.
 
 #### How to run it
 
+//TODO
+
 ### Scenario 02: Hello World Events
 
 Instead of a web client, a Client application with implement a batch process 
@@ -45,6 +47,8 @@ to call Hello Service and produce events into a Kafka Topic.
 ```
 
 #### How to run it
+
+//TODO
 
 ## Lab 02: Twitter Kafka-based application
 
@@ -81,7 +85,19 @@ Choreography view:
                +----------+
 ```
 
+### Instrumentation
+
+- Kafka Clients (Producer/Consumer): <https://github.com/openzipkin/brave/tree/master/instrumentation/kafka-clients>
+- Kafka Streams (WIP): <https://github.com/openzipkin/brave/tree/master/instrumentation/kafka-streams>
+- Kafka Interceptors for Kafka Connect, REST Proxy, etc (WIP): <https://github.com/sysco-middleware/kafka-interceptors/tree/master/zipkin> 
+
+### How to run it
+
+//TODO
+
 ## Lab 3: Spigo Simulation
+
+### How to run it
 
 Visualize architectures on `json_arch/` dir and with UI:
 
