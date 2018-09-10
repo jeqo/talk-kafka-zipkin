@@ -35,6 +35,7 @@ public class HelloConsumer {
     consumerConfigs.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
     consumerConfigs.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
     consumerConfigs.setProperty(ConsumerConfig.GROUP_ID_CONFIG, "hello-consumer");
+    consumerConfigs.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, OffsetResetStrategy.EARLIEST.name().toLowerCase());
     final Consumer<String, String> kafkaConsumer = new KafkaConsumer<>(consumerConfigs);
     final Consumer<String, String> tracingConsumer = kafkaTracing.consumer(kafkaConsumer);
 
