@@ -11,6 +11,10 @@
 
     <artifactId>hello-service</artifactId>
 
+    <properties>
+        <main.class>io.github.jeqo.talk.HelloService</main.class>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>io.dropwizard</groupId>

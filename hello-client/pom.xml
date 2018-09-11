@@ -11,6 +11,10 @@
 
     <artifactId>hello-client</artifactId>
 
+    <properties>
+        <main.class>io.github.jeqo.talk.HelloClient</main.class>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>

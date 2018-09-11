@@ -12,7 +12,7 @@ import zipkin2.Span;
 import zipkin2.reporter.AsyncReporter;
 import zipkin2.reporter.kafka11.KafkaSender;
 
-public class TranslationServiceApplication extends Application<Configuration> {
+public class TranslationService extends Application<Configuration> {
 
   @Override
   public void run(Configuration configuration, Environment environment) {
@@ -40,7 +40,7 @@ public class TranslationServiceApplication extends Application<Configuration> {
   }
 
   public static void main(String[] args) throws Exception {
-    final TranslationServiceApplication app = new TranslationServiceApplication();
+    final TranslationService app = new TranslationService();
     app.run(args);
   }
 }

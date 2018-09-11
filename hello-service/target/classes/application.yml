@@ -1,8 +1,0 @@
-server:
-  type: simple
-  applicationContextPath: /
-  adminContextPath: /admin
-  connector:
-    type: http
-    port: 18000
-translationServiceUrl: http://localhost:18010/translate

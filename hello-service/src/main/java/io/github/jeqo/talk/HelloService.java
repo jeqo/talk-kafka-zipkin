@@ -13,7 +13,7 @@ import zipkin2.Span;
 import zipkin2.reporter.AsyncReporter;
 import zipkin2.reporter.kafka11.KafkaSender;
 
-public class HelloServiceApplication extends Application<HelloServiceConfiguration> {
+public class HelloService extends Application<HelloServiceConfiguration> {
   @Override
   public void run(HelloServiceConfiguration configuration, Environment environment) {
 
@@ -49,7 +49,7 @@ public class HelloServiceApplication extends Application<HelloServiceConfigurati
   }
 
   public static void main(String[] args) throws Exception {
-    final HelloServiceApplication app = new HelloServiceApplication();
+    final HelloService app = new HelloService();
     app.run(args);
   }
 }

@@ -11,6 +11,9 @@
 
     <artifactId>hello-consumer</artifactId>
 
+    <properties>
+        <main.class>io.github.jeqo.talk.HelloConsumer</main.class>
+    </properties>
 
     <dependencies>
         <dependency>
