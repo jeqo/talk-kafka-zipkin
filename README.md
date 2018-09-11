@@ -2,6 +2,8 @@
 
 Demo material from talk about tracing Kafka-based applications with Zipkin
 
+Slides: <https://speakerdeck.com/jeqo/the-importance-of-observability-for-kafka-based-applications-with-zipkin>
+
 ## Labs
 
 1. Hello world distributed tracing: Understand basics about distributed
@@ -148,6 +150,10 @@ Java) directly on your code:
   }
 ```
 
+By using existing libraries instrumentation you will get most of the picture on how 
+your service collaborate, but when you need to get details about an specific task part
+of your code, then you can add "custom" `spans`, so your debugging is more specific.
+
 ### Scenario 02: Hello World Events
 
 Instead of a web client, a Client application with implement a batch process 
@@ -158,15 +164,57 @@ to call Hello Service and produce events into a Kafka Topic.
 +--------+   +---------------+   +------------------+
 |        |-->| Hello Service |-->| Hello Transation |
 |        |   +---------------+   +------------------+
-| Hello  |
-| Client |   +-------+   +----------------+
-|        |-->| Kafka |-->| Hello Consumer |
-+--------+   +-------+   +----------------+
+| Hello* |
+| Client |   +--------+   +-----------------+
+|        |-->| Kafka* |-->| Hello Consumer* |
++--------+   +--------+   +-----------------+
 ```
+
+> (*) new components
+
+This scenario represents how to propagate context when you are not communicating 
+services directly by via messaging. In this case, we will use Kafka as an intermediate
+component to publish events.
 
 #### How to run it
 
-//TODO
+1. Start the `hello-client`:
+
+```
+make hello-client
+```
+
+This will run the batch process to call `hello-service` 6 times in sequence.
+
+It will take around 15 secs. to execute.
+
+As this component is starting the trace, then `hello-service` and `hello-translation`
+spans will become children of this parent span:
+
+![](docs/hello-6.png)
+
+![](docs/hello-7.png)
+
+The messaging broker is defined as an external library here, as part of the `kafka-clients`
+instrumentation, so we can have it as part of the picture.
+
+> Interesting finding: first send operation by `kafka-client` Producer, is slower than the others.
+
+2. Now, let's start the consumer to see how its executions will become part of the trace:
+
+```
+make hello-consumer
+```
+
+![](docs/hello-8.png)
+
+> Benefit: Now we have evidence about how much time is taking for data to get downstream. 
+For instance, is the goal of adopting Kafka is to reduce latency on your data pipelines, here 
+is the evidence of how much latency you are saving, or not.
+
+In the case of Kafka Producers and Consumers, the instrumentation provided by Brave is 
+injecting the trace context on the Kafka Headers, so the consumers spans can reference to 
+the parent span.
 
 ## Lab 02: Twitter Kafka-based application
 
