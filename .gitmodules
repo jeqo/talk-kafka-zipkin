@@ -1,0 +1,9 @@
+[submodule "spigo"]
+	path = spigo
+	url = git@github.com:jeqo/spigo
+[submodule "go-vizceral"]
+	path = go-vizceral
+	url = git@github.com:jeqo/go-vizceral
+[submodule "vizceral-example"]
+	path = vizceral-example
+	url = git@github.com:jeqo/vizceral-example
