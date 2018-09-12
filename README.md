@@ -342,63 +342,162 @@ evidenced as part of a trace:
 
 > Benefit: we can see which is the part of the data pipelines that I can start tuning/refactoring.
 
+//TODO add screenshot of service dependency model
+
 ## Lab 3: Spigo Simulation
 
-This lab is prepared to give some hints on how to getting started with tracing by experimenting 
-and simulating architecture models.
+This lab is prepared to give some hints on how to getting started with tracing by experimenting and simulating 
+architecture models.
 
 @adrianco has developed a tool call SPIGO that is able to model an architecture as a 
 JSON file, where all components and dependencies are described. Then you can visualize
-and run this model. Finally you can export the traces from the simulation to Zipkin and 
-Vizceral.
+and run this model. Finally you can export the traces from the simulation to Zipkin and Vizceral.
 
 ### How to run it
 
-Clone Spigo project: 
+3 submodules are cloned for this demo:
+
+- spigo
+- go-vizceral
+- vizceral-example
+
+1. Describing and visualizing architecture
+
+Spigo defines an architecture in JSON format, so you can use it later for visualization
+and simulation.
+
+For instance a simple case is the LAMP (Linux, Apache, MySQL and PHP) architecture
+(`spigo/json_arch/lamp_arch.json`):
+
+```json
+{
+    "arch": "lamp",
+    "description":"Simple LAMP stack",
+    "version": "arch-0.0",
+    "victim": "",
+    "services": [
+        { "name": "rds-mysql",     "package": "store",       "count": 2,  "regions": 1, "dependencies": [] },
+        { "name": "memcache",      "package": "store",       "count": 1,  "regions": 1, "dependencies": [] },
+        { "name": "webserver",     "package": "monolith",    "count": 18, "regions": 1, "dependencies": ["memcache", "rds-mysql"] },
+        { "name": "webserver-elb", "package": "elb",         "count": 0,  "regions": 1, "dependencies": ["webserver"] },
+        { "name": "www",           "package": "denominator", "count": 0,  "regions": 0, "dependencies": ["webserver-elb"] }
+    ]
+}
+```
+
+And a more complex architecture would be Netflix one:
+
+```json
+{
+    "arch": "netflix",
+    "description":"A simplified Netflix service. See http://netflix.github.io/ to decode the package names",
+    "version": "arch-0.0",
+    "victim": "homepage",
+    "services": [
+        { "name": "cassSubscriber",     "package": "priamCassandra", "count": 6, "regions": 1, "dependencies": ["cassSubscriber", "eureka"]},
+        { "name": "evcacheSubscriber",  "package": "store",          "count": 3, "regions": 1, "dependencies": []},
+        { "name": "subscriber",         "package": "staash",         "count": 3, "regions": 1, "dependencies": ["cassSubscriber","evcacheSubscriber"]},
+        { "name": "cassPersonalization","package": "priamCassandra", "count": 6, "regions": 1, "dependencies": ["cassPersonalization", "eureka"]},
+        { "name": "personalizationData","package": "staash",         "count": 3, "regions": 1, "dependencies": ["cassPersonalization"]},
+        { "name": "cassHistory",        "package": "priamCassandra", "count": 6, "regions": 1, "dependencies": ["cassHistory", "eureka"]},
+        { "name": "historyData",        "package": "staash",         "count": 3, "regions": 1, "dependencies": ["cassHistory"]},
+        { "name": "contentMetadataS3",  "package": "store",          "count": 1, "regions": 1, "dependencies": []},
+        { "name": "personalize",        "package": "karyon",         "count": 9, "regions": 1, "dependencies": ["contentMetadataS3", "subscriber", "historyData", "personalizationData"]},
+        { "name": "login",              "package": "karyon",         "count": 6, "regions": 1, "dependencies": ["subscriber"]},
+        { "name": "home",               "package": "karyon",         "count": 9, "regions": 1, "dependencies": ["contentMetadataS3", "subscriber", "personalize"]},
+        { "name": "play",               "package": "karyon",         "count": 9, "regions": 1, "dependencies": ["contentMetadataS3", "historyData", "subscriber"]},
+        { "name": "loginpage",          "package": "karyon",         "count": 6, "regions": 1, "dependencies": ["login"]},
+        { "name": "homepage",           "package": "karyon",         "count": 9, "regions": 1, "dependencies": ["home"]},
+        { "name": "playpage",           "package": "karyon",         "count": 9, "regions": 1, "dependencies": ["play"]},
+        { "name": "wwwproxy",           "package": "zuul",           "count": 3, "regions": 1, "dependencies": ["loginpage", "homepage", "playpage"]},
+        { "name": "apiproxy",           "package": "zuul",           "count": 3, "regions": 1, "dependencies": ["login", "home", "play"]},
+        { "name": "www-elb",            "package": "elb",            "count": 0, "regions": 1, "dependencies": ["wwwproxy"]},
+        { "name": "api-elb",            "package": "elb",            "count": 0, "regions": 1, "dependencies": ["apiproxy"]},
+        { "name": "www",                "package": "denominator",    "count": 0, "regions": 0, "dependencies": ["www-elb"]},
+        { "name": "api",                "package": "denominator",    "count": 0, "regions": 0, "dependencies": ["api-elb"]}
+    ]
+}
+```
+
+> Package terms (e.g. denominator, zuul, karyon) emulate Netflix component names.
+
+To visualize the architecture, open a new terminal and run:
 
 ```
-git clone git@github.com:jeqo/spigo
-cd spigo
+make spigo-ui
 ```
 
-Visualize architectures on `json_arch/` dir and with UI:
+This will start a web application on <http://localhost:8000> where you can visualize
+your architecture from above:
 
-```
-cd ui
-npm run dev
-```
+//TODO add screenshot
 
-Go to <http://localhost:8000>
+2. Simulate your architecture
+
+Once your architecture is defined, you can execute a simulation of requests from  `denominator` component.
+This simulation will run on your machine creating Goroutines and channels communication
+between them to emulate comunication between distributed components.
 
 Run Spigo to generate traces:
 
 ```
+cd spigo/
 spigo -c -d 5 -a netflix
 ```
 
-Export traces to Zipkin:
+3. Export traces to Zipkin:
+
+This execution will record Zipkin traces on `json_metrics/netflix_flow.json` file.
+To export it to Zipkin, run:
 
 ```
+cd spigo/
 misc/zipkin.sh netflix
 ```
 
-Visualize traces on [Zipkin](http://localhost:9411)
+Then you can go to visualize traces on [Zipkin](http://localhost:9411)
 
-Generate Vizceral JSON from Architecture:
+//TODO add screenshot
+
+You can follow the same example with the current or desired architecture of your
+organization and start experimenting with Distributed Tracing platforms like Zipkin.
+
+4. Generate Vizceral traffic monitoring from your architecture:
+
+Vizceral is one more example of models that can be built on top of tracing data.
+It will show how messages are coming from the internet, are spread between data-centers
+and then you can drill down into the details of specific components.
+
+Migrate your Spigo model to Vizceral JSON model:
 
 ```
-git checkout git@github.com:jeqo/go-vizceral
 cd go-vizceral/arch2vizceral
 cp <arch json> arch_json/.
 ./arch2vizceral -arch netflix > netflix_vizceral.json
 ```
 
+Update the hard-coded reference to JSON located on `src/components/trafficFlow.jsx#L151`:
+
+```jsx
+  beginSampleData () {
+    this.traffic = { nodes: [], connections: [] };
+    request.get('netflix_vizceral.json')
+      .set('Accept', 'application/json')
+      .end((err, res) => {
+        if (res && res.status === 200) {
+          this.traffic.clientUpdateTime = Date.now();
+          this.updateData(res.body);
+        }
+      });
+  }
+```
+
 Copy Vizceral JSON to Vizceral example project and run example:
 
 ```
-git checkout git@github.com:jeqo/vizceral-example
-cd vizceral-example
-npm run dev
+make vizceral
 ```
 
 Go to <http://localhost:8080>
+
+//TODO add screenshots vizceral

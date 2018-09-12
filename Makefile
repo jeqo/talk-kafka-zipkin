@@ -1,5 +1,5 @@
 .PHONY: all
-all: build docker-compose-up
+all: build docker-compose-up clone-submodule
 
 .PHONY: build
 build: ## build java applications
@@ -8,6 +8,9 @@ build: ## build java applications
 .PHONY: docker-compose-up
 docker-compose-up: ## start docker-compose environment
 	docker-compose up -d
+
+.PHONY: clone-submodule
+	git submodule update --init
 
 .PHONY: hello-service
 hello-service: # starts hello service
@@ -53,4 +56,14 @@ twitter-console: # starts the kafka streams processor to parse json to avro
 down: # stop docker-compose
 	docker-compose down
 
+.PHONY: spigo-ui
+spigo-ui: # start spigo ui
+	cd spigo/ui/; \
+	npm install; \
+	npm run dev
 
+.PHONY: vizceral
+vizceral: # start vizceral example
+	cd vizceral-example/; \
+	npm install; \
+	npm run dev
