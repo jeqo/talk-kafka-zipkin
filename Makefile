@@ -10,6 +10,7 @@ docker-compose-up: ## start docker-compose environment
 	docker-compose up -d
 
 .PHONY: clone-submodule
+clone-submodule: # clone submodules
 	git submodule update --init
 
 .PHONY: hello-service

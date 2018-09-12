@@ -342,7 +342,12 @@ evidenced as part of a trace:
 
 > Benefit: we can see which is the part of the data pipelines that I can start tuning/refactoring.
 
-//TODO add screenshot of service dependency model
+After recording traces from distributed components, you are storing real
+behaviour from your systems. Now you have the opportunity of creating models on
+top of tracing data. One example is the service dependency model that comes out
+of the box from Zipkin:
+
+![](docs/twitter-5.png)
 
 ## Lab 3: Spigo Simulation
 
@@ -430,7 +435,7 @@ make spigo-ui
 This will start a web application on <http://localhost:8000> where you can visualize
 your architecture from above:
 
-//TODO add screenshot
+![](docs/spigo-1.png)
 
 2. Simulate your architecture
 
@@ -457,7 +462,11 @@ misc/zipkin.sh netflix
 
 Then you can go to visualize traces on [Zipkin](http://localhost:9411)
 
-//TODO add screenshot
+![](docs/spigo-3.png)
+
+And check how the service dependency is represented:
+
+![](docs/spigo-2.png)
 
 You can follow the same example with the current or desired architecture of your
 organization and start experimenting with Distributed Tracing platforms like Zipkin.
@@ -500,4 +509,11 @@ make vizceral
 
 Go to <http://localhost:8080>
 
-//TODO add screenshots vizceral
+Traffic from internet to datacenters:
+
+![](docs/spigo-4.png)
+
+If you check one of the data centers, you will see the traffic between
+services:
+
+![](docs/spigo-5.png)
