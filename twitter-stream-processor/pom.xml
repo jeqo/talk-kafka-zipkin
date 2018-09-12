@@ -11,6 +11,10 @@
 
     <artifactId>twitter-stream-processor</artifactId>
 
+    <properties>
+        <main.class>io.github.jeqo.talk.TwitterStreamProcessor</main.class>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.kafka</groupId>
@@ -35,7 +39,7 @@
         <dependency>
             <groupId>io.zipkin.reporter2</groupId>
             <artifactId>zipkin-sender-kafka11</artifactId>
-            <version>2.7.7</version>
+            <version>${zipkin-reporter.version}</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>

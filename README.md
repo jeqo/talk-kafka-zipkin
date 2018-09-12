@@ -218,7 +218,22 @@ the parent span.
 
 ## Lab 02: Twitter Kafka-based application
 
-Data-flow view
+Kafka Platform provides different APIs to implement streaming applications. We have seen 
+in the Lab 01 that Brave offers instrumentation for Kafka Client library. In this Lab, we 
+will evaluate how to instrument the other APIs: Streams API and Connect API.
+
+To do this, we will introduce a use-case: 
+
+> We have applications developed around Tweets. First of all, we need to pull tweets
+from Twitter. Once we have Tweets available in our system, we need to parse them into 
+our preferred format, to then be consumed by many applications. 
+
+For this use-case we will use a [Twitter Source Connector](https://github.com/jcustenborder/kafka-connect-twitter)
+to pull tweets into Kafka. We will implement a Kafka Streams application to transform from JSON to Avro format.
+On the other side of Kafka, a [JDBC Source Connector](https://github.com/confluentinc/kafka-connect-jdbc)
+will send records to PostgreSQL, and another consumer will print records to console.
+
+**Data-flow view**:
 
 ```
 +---------+   +-------------------+          +------------------+    +--------------+
@@ -230,7 +245,7 @@ Data-flow view
                                                                      +--------------+
 ```
 
-Choreography view:
+**Choreography view**:
 
 ```
                   Kafka
@@ -253,15 +268,89 @@ Choreography view:
 
 ### Instrumentation
 
+For Kafka Clients and Kafka Streams, as you implement the code, there are existing 
+libraries to instrument them:
+
 - Kafka Clients (Producer/Consumer): <https://github.com/openzipkin/brave/tree/master/instrumentation/kafka-clients>
 - Kafka Streams (WIP): <https://github.com/openzipkin/brave/tree/master/instrumentation/kafka-streams>
+
+For the case of Kafka Connectors, implementation is already done, but Kafka offers 
+an interface to inject some code before it produce records to Kafka, and before a 
+record is consumed by consumers, called [Kafka Interceptors](https://cwiki.apache.org/confluence/display/KAFKA/KIP-42%3A+Add+Producer+and+Consumer+Interceptors).
+
+At [Sysco](https://github.com/sysco-middleware) we have developed an initial version of interceptors
+for Zipkin that reuse some of the logic of Kafka Instrumentation.
+
 - Kafka Interceptors for Kafka Connect, REST Proxy, etc (WIP): <https://github.com/sysco-middleware/kafka-interceptors/tree/master/zipkin> 
+
+These interceptors have to be added to the classpath where connectors are running, and the pass them via configuration:
+
+```yaml
+      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor'
+      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor'
+```
 
 ### How to run it
 
-//TODO
+1. Configure a Twitter applications [here](https://apps.twitter.com) and set secrets here: `twitter-tweets-source-connector/twitter-source.json`
+
+2. Deploy the Twitter Source Connector:
+
+```
+make twitter-source
+```
+
+This will start pulling tweets, based on the configuration from `twitter-tweets-source-connector/twitter-source.json`.
+You can go to Zipkin, as connector is instrumented, to validate that is running:
+
+![](docs/twitter-1.png)
+
+Each span will represent each tweet that has been received by connector and sent to Kafka.
+
+It is just including the `on_send` method execution, that is not significant, but
+it brings Kafka Connectors into the distributed trace picture.
+
+2. Start the Stream Processing applications:
+
+```
+make twitter-stream
+```
+
+As you deploy Kafka-based applications, as they are instrumented, they will be added
+to the traces:
+
+![](docs/twitter-2.png)
+
+Here the stream processor is part of the picture.
+
+3. Let's now deploy the JDBC Sink Connector and the Console application:
+
+```
+make twitter-jdbc
+```
+
+```
+make twitter-console
+```
+
+![](docs/twitter-3.png)
+
+Now we have all distributed components collaboration, part of a Kafka data pipeline, 
+evidenced as part of a trace:
+
+![](docs/twitter-4.png)
+
+> Benefit: we can see which is the part of the data pipelines that I can start tuning/refactoring.
 
 ## Lab 3: Spigo Simulation
+
+This lab is prepared to give some hints on how to getting started with tracing by experimenting 
+and simulating architecture models.
+
+@adrianco has developed a tool call SPIGO that is able to model an architecture as a 
+JSON file, where all components and dependencies are described. Then you can visualize
+and run this model. Finally you can export the traces from the simulation to Zipkin and 
+Vizceral.
 
 ### How to run it
 

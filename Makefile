@@ -29,3 +29,28 @@ hello-consumer: # starts hello consumer
 	cd hello-consumer/; \
 	java -jar target/hello-consumer.jar
 
+.PHONY: twitter-source
+twitter-source: # starts twitter source connector
+	cd twitter-tweets-source-connector/; \
+	sh deploy.sh
+
+.PHONY: twitter-stream
+twitter-stream: # starts the kafka streams processor to parse json to avro
+	cd twitter-stream-processor/; \
+	java -jar target/twitter-stream-processor.jar
+
+.PHONY: twitter-jdbc
+twitter-jdbc: # deploys kafka jdbc sink connector to postgres
+	cd twitter-jdbc-sink-connector/; \
+	sh deploy.sh
+
+.PHONY: twitter-console
+twitter-console: # starts the kafka streams processor to parse json to avro
+	cd twitter-console-consumer/; \
+	java -jar target/twitter-console-consumer.jar
+
+.PHONY: down
+down: # stop docker-compose
+	docker-compose down
+
+
