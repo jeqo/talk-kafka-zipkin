@@ -25,30 +25,6 @@ public class TwitterStreamProcessor {
   public static void main(String[] args) {
     final ObjectMapper objectMapper = new ObjectMapper();
 
-    final StreamsBuilder builder = new StreamsBuilder();
-    builder.stream("twitter_json_01", Consumed.with(Serdes.String(), Serdes.String()))
-    .mapValues(value -> {
-      try {
-        return objectMapper.readTree(value);
-      } catch (IOException e) {
-        e.printStackTrace();
-        return null;
-      }
-    })
-    .filterNot((k, v) -> Objects.isNull(v))
-    .mapValues((k, v) -> parseTweet(v))
-    .to("twitter_avro_v01");
-
-    final Topology topology = builder.build();
-
-    final Properties config = new Properties();
-    config.setProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:29092");
-    config.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "stream-transform-v02");
-    config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-    config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
-    config.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://localhost:8081");
-
-
     /* START TRACING INSTRUMENTATION */
     final KafkaSender sender = KafkaSender.newBuilder().bootstrapServers("localhost:29092").build();
     final AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build();
@@ -61,6 +37,28 @@ public class TwitterStreamProcessor {
     final KafkaTracing kafkaTracing = KafkaTracing.newBuilder(tracing).remoteServiceName("kafka").build();
     /* END TRACING INSTRUMENTATION */
 
+    final Properties config = new Properties();
+    config.setProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:29092");
+    config.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "stream-transform-v02");
+    config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
+    config.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://localhost:8081");
+
+    final StreamsBuilder builder = new StreamsBuilder();
+    builder.stream("twitter_json_01", Consumed.with(Serdes.String(), Serdes.String()))
+        .mapValues(value -> {
+          try {
+            return objectMapper.readTree(value);
+          } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+          }
+        })
+        .filterNot((k, v) -> Objects.isNull(v))
+        .mapValues((k, v) -> parseTweet(v))
+        .to("twitter_avro_v01");
+
+    final Topology topology = builder.build();
     final KafkaClientSupplier clientSupplier = KafkaStreamsTracing.create(kafkaTracing).kafkaClientSupplier();
     final KafkaStreams kafkaStreams = new KafkaStreams(topology, config, clientSupplier);
     kafkaStreams.start();
