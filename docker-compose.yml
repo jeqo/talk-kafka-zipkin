@@ -43,6 +43,8 @@ services:
       - kafka
   twitter-connect:
     image: syscomiddleware/cp-kafka-connect:5.0.0
+    build:
+      context: docker-images/cp-kafka-connect
     ports:
       - 8083:8083
     environment:
@@ -72,6 +74,8 @@ services:
       - schema-registry
   jdbc-connect:
     image: syscomiddleware/cp-kafka-connect:5.0.0
+    build:
+      context: docker-images/cp-kafka-connect
     ports:
       - 8084:8084
     environment:
