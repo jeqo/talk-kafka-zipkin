@@ -1,5 +1,5 @@
 .PHONY: all
-all: build docker-compose-up clone-submodule
+all: clone-submodule build docker-compose-up
 
 .PHONY: build
 build: ## build java applications
