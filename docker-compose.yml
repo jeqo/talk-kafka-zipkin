@@ -42,9 +42,9 @@ services:
     depends_on:
       - kafka
   twitter-connect:
-    image: syscomiddleware/cp-kafka-connect:5.0.0
+    image: syscomiddleware/cp-kafka-connect:5.0.0-0.1
     build:
-      context: docker-images/cp-kafka-connect
+      context: docker-images/confluent-kafka-connect
     ports:
       - 8083:8083
     environment:
@@ -66,16 +66,16 @@ services:
       CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       CONNECT_ZOOKEEPER_CONNECT: zookeeper:2181
-      CONNECT_PLUGIN_PATH: '/usr/share/java/connector'
+      CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
       CONNECT_PRODUCER_CLIENT_ID: twitter-connector
       CONNECT_PRODUCER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor'
       CONNECT_CONSUMER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor'
     depends_on:
       - schema-registry
   jdbc-connect:
-    image: syscomiddleware/cp-kafka-connect:5.0.0
+    image: syscomiddleware/cp-kafka-connect:5.0.0-0.1
     build:
-      context: docker-images/cp-kafka-connect
+      context: docker-images/confluent-kafka-connect
     ports:
       - 8084:8084
     environment:
@@ -96,7 +96,7 @@ services:
       CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       CONNECT_ZOOKEEPER_CONNECT: zookeeper:2181
-      CONNECT_PLUGIN_PATH: /usr/share/java
+      CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
       CONNECT_PRODUCER_CLIENT_ID: twitter-connector
       CONNECT_PRODUCER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor'
       CONNECT_CONSUMER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor'
