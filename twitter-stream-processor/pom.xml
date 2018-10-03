@@ -34,9 +34,9 @@
         <dependency>
             <groupId>io.zipkin.brave</groupId>
             <artifactId>brave-instrumentation-kafka-streams</artifactId>
-            <version>5.3.4-SNAPSHOT</version>
+            <version>5.4.3-SNAPSHOT</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/lib/brave-instrumentation-kafka-streams-5.3.4-SNAPSHOT.jar</systemPath>
+            <systemPath>${project.basedir}/lib/brave-instrumentation-kafka-streams-5.4.3-SNAPSHOT.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>io.confluent</groupId>

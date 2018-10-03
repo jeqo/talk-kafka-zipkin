@@ -59,8 +59,8 @@ public class TwitterStreamProcessor {
         .to("twitter_avro_v01");
 
     final Topology topology = builder.build();
-    final KafkaClientSupplier clientSupplier = KafkaStreamsTracing.create(kafkaTracing).kafkaClientSupplier();
-    final KafkaStreams kafkaStreams = new KafkaStreams(topology, config, clientSupplier);
+    final KafkaStreamsTracing kafkaStreamsTracing = KafkaStreamsTracing.create(tracing);
+    final KafkaStreams kafkaStreams = kafkaStreamsTracing.kafkaStreams(topology, config);
     kafkaStreams.start();
 
     Runtime.getRuntime().addShutdownHook(new Thread(kafkaStreams::close));
