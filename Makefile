@@ -41,7 +41,7 @@ twitter-source: # starts twitter source connector
 .PHONY: twitter-stream
 twitter-stream: # starts the kafka streams processor to parse json to avro
 	cd twitter-stream-processor/; \
-    java -cp target/twitter-stream-processor.jar:lib/brave-instrumentation-kafka-streams-5.3.4-SNAPSHOT.jar io.github.jeqo.talk.TwitterStreamProcessor
+    java -cp target/twitter-stream-processor.jar:lib/brave-instrumentation-kafka-streams-5.4.3-SNAPSHOT.jar io.github.jeqo.talk.TwitterStreamProcessor
 
 .PHONY: twitter-jdbc
 twitter-jdbc: # deploys kafka jdbc sink connector to postgres

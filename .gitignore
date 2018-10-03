@@ -1,3 +1,4 @@
 target/
 dependency-reduced-pom.xml
 .classpath
+twitter-tweets-source-connector/twitter-source.json
