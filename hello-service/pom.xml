@@ -45,5 +45,21 @@
         </dependency>
     </dependencies>
 
-
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>0.10.0</version>
+                <configuration>
+                    <container>
+                        <args>
+                            <arg>server</arg>
+                            <arg>application.yml</arg>
+                        </args>
+                    </container>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

@@ -1,0 +1,21 @@
+---
+version: '3'
+services:
+  hello-service:
+    image: hello-service
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - TRANSLATION_SERVICE_BASE_URL=http://localhost:18010
+  hello-client:
+    image: hello-client
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - HELLO_SERVICE_BASE_URL=http://hello-service:18000
+  hello-translation:
+    image: hello-translation
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+  hello-consumer:
+    image: hello-consumer
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092

@@ -1,5 +1,9 @@
 .PHONY: all
-all: clone-submodule build docker-compose-up
+all: clone-submodule format build docker-compose-up
+
+.PHONY: format
+format:
+	sh mvnw spring-javaformat:apply
 
 .PHONY: build
 build: ## build java applications

@@ -8,32 +8,46 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
 public class HelloServiceConfiguration extends Configuration {
-  @Valid
-  @NotNull
-  private String translationServiceUrl;
 
-  @Valid
-  @NotNull
-  private HttpClientConfiguration httpClient = new HttpClientConfiguration();
+	@Valid
+	@NotNull
+	private String translationServiceUrl;
 
-  @JsonProperty("httpClient")
-  public HttpClientConfiguration getHttpClientConfiguration() {
-    return httpClient;
-  }
+	@Valid
+	@NotNull
+	private String kafkaBootstrapServers;
 
-  @JsonProperty("httpClient")
-  public void setHttpClientConfiguration(HttpClientConfiguration httpClient) {
-    this.httpClient = httpClient;
-  }
+	@Valid
+	@NotNull
+	private HttpClientConfiguration httpClient = new HttpClientConfiguration();
 
-  @NotNull
-  @JsonProperty("translationServiceUrl")
-  public String getTranslationServiceUrl() {
-    return translationServiceUrl;
-  }
+	@JsonProperty("httpClient")
+	public HttpClientConfiguration getHttpClientConfiguration() {
+		return httpClient;
+	}
 
-  @JsonProperty("translationServiceUrl")
-  public void setTranslationServiceUrl(@NotNull String translationServiceUrl) {
-    this.translationServiceUrl = translationServiceUrl;
-  }
+	@JsonProperty("httpClient")
+	public void setHttpClientConfiguration(HttpClientConfiguration httpClient) {
+		this.httpClient = httpClient;
+	}
+
+	@NotNull
+	@JsonProperty("translationServiceUrl")
+	public String getTranslationServiceUrl() {
+		return translationServiceUrl;
+	}
+
+	@JsonProperty("translationServiceUrl")
+	public void setTranslationServiceUrl(@NotNull String translationServiceUrl) {
+		this.translationServiceUrl = translationServiceUrl;
+	}
+
+	public String getKafkaBootstrapServers() {
+		return kafkaBootstrapServers;
+	}
+
+	public void setKafkaBootstrapServers(String kafkaBootstrapServers) {
+		this.kafkaBootstrapServers = kafkaBootstrapServers;
+	}
+
 }
