@@ -59,13 +59,12 @@ public class HelloClient {
 				producerConfigs);
 		final Producer<String, String> tracedKafkaProducer = kafkaTracing
 				.producer(kafkaProducer);
-
-		final List<String> names = Arrays.asList("Jorge", "Eliana", "Jon", "Robin", "Jun",
-				"Neha");
-
 		final String baseUrl = config.getString("hello-service.base-url");
+
 		/* START OPERATION */
 		brave.ScopedSpan batchSpan = tracer.startScopedSpan("call-hello-batch");
+		final List<String> names = Arrays.asList("Jorge", "Eliana", "Jon", "Robin", "Jun",
+				"Neha");
 		batchSpan.annotate("batch started");
 		for (String name : names) {
 			brave.ScopedSpan span = tracer.startScopedSpan("call-hello");

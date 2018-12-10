@@ -1,0 +1,9 @@
+server:
+  type: simple
+  applicationContextPath: /
+  adminContextPath: /admin
+  connector:
+    type: http
+    port: 18000
+translationServiceBaseUrl: ${TRANSLATION_SERVICE_BASE_URL:-http://localhost:18010}
+kafkaBootstrapServers: ${KAFKA_BOOTSTRAP_SERVERS:-localhost:29092}

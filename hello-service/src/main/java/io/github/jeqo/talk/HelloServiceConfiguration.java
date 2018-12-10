@@ -32,12 +32,12 @@ public class HelloServiceConfiguration extends Configuration {
 	}
 
 	@NotNull
-	@JsonProperty("translationServiceUrl")
+	@JsonProperty("translationServiceBaseUrl")
 	public String getTranslationServiceUrl() {
 		return translationServiceUrl;
 	}
 
-	@JsonProperty("translationServiceUrl")
+	@JsonProperty("translationServiceBaseUrl")
 	public void setTranslationServiceUrl(@NotNull String translationServiceUrl) {
 		this.translationServiceUrl = translationServiceUrl;
 	}

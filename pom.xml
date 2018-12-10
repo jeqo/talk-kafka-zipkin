@@ -157,6 +157,11 @@
                         <phase>install</phase>
                     </execution>
                 </executions>
+                <configuration>
+                    <from>
+                        <image>openjdk:11-jre</image>
+                    </from>
+                </configuration>
             </plugin>
         </plugins>
     </build>
