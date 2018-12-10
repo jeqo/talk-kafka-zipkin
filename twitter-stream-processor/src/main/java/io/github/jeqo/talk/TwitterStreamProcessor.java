@@ -52,28 +52,26 @@ public class TwitterStreamProcessor {
 
 		final StreamsBuilder builder = new StreamsBuilder();
 		builder.stream("twitter_json_01", Consumed.with(Serdes.String(), Serdes.String()))
-				.transform(kafkaStreamsTracing.map("parse-json",
-						(String key, String value) -> {
-							try {
-								Thread.sleep(100);
-								return KeyValue.pair(key, objectMapper.readTree(value));
-							}
-							catch (Exception e) {
-								e.printStackTrace();
-								return KeyValue.pair(key, null);
-							}
-						}))
-				.filterNot((k, v) -> Objects.isNull(v)).transformValues(
-						kafkaStreamsTracing.mapValues("to-avro", (JsonNode value) -> {
-							try {
-								Thread.sleep(100);
-							}
-							catch (InterruptedException e) {
-								e.printStackTrace();
-							}
-							return parseTweet(value);
-						}))
-				.to("twitter_avro_v01");
+				.map((String key, String value) -> {
+					try {
+						Thread.sleep(100);
+						return KeyValue.pair(key, objectMapper.readTree(value));
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+						return KeyValue.pair(key, null);
+					}
+				})
+				// .transform(kafkaStreamsTracing.mark("mark"))
+				.filterNot((k, v) -> Objects.isNull(v)).mapValues((JsonNode value) -> {
+					try {
+						Thread.sleep(100);
+					}
+					catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					return parseTweet(value);
+				}).to("twitter_avro_v01");
 
 		final Topology topology = builder.build();
 		final KafkaStreams kafkaStreams = kafkaStreamsTracing.kafkaStreams(topology,

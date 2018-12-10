@@ -26,15 +26,15 @@
             <artifactId>kafka-clients</artifactId>
             <version>${kafka.version}</version>
         </dependency>
+
+        <!-- Tracing Instrumentation -->
         <dependency>
             <groupId>io.zipkin.brave</groupId>
             <artifactId>brave-instrumentation-kafka-clients</artifactId>
-            <version>${brave.version}</version>
         </dependency>
         <dependency>
             <groupId>io.zipkin.reporter2</groupId>
             <artifactId>zipkin-sender-kafka11</artifactId>
-            <version>${zipkin-reporter.version}</version>
         </dependency>
     </dependencies>
 </project>
