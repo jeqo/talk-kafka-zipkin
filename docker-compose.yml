@@ -1,15 +1,32 @@
 ---
 version: '3'
 services:
+  zipkin-cassandra:
+    image: openzipkin/zipkin-cassandra:2.11
+    hostname: zipkin-cassandra
+    ports:
+      - 9042:9042
   zipkin:
     image: openzipkin/zipkin:2.11
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       JAVA_OPTS: "-Dlogging.level.zipkin=DEBUG -Dlogging.level.zipkin2=DEBUG"
+      STORAGE_TYPE: cassandra3
+      CASSANDRA_CONTACT_POINTS: zipkin-cassandra
     ports:
       - 9411:9411
     depends_on:
       - kafka
+  zipkin-dependency-streaming:
+    image: syscomiddleware/zipkin-dependencies-streaming:0.1.4
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      STORAGE_TYPE: CASSANDRA
+      CASSANDRA_CONTACT_POINTS: zipkin-cassandra
+      CASSANDRA_KEYSPACE: zipkin2
+    depends_on:
+      - zipkin
+      - zipkin-cassandra
   zookeeper:
     image: confluentinc/cp-zookeeper:5.0.0
     ports:
