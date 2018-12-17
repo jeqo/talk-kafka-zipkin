@@ -1,5 +1,5 @@
 .PHONY: all
-all: clone-submodule format build docker-compose-up
+all: clone-submodule format build
 
 .PHONY: format
 format:
@@ -9,13 +9,29 @@ format:
 build: ## build java applications
 	sh mvnw clean install
 
-.PHONY: docker-compose-up
-docker-compose-up: ## start docker-compose environment
+.PHONY: start
+start: ## start docker-compose environment
 	docker-compose up -d
+
+.PHONY: start-hello
+start-hello: start
+	docker-compose -f docker-compose.yml -f docker-compose-hello.yml up -d
+
+.PHONY: start-hello-client
+start-hello-client:
+	docker-compose -f docker-compose.yml -f docker-compose-hello.yml start hello-client
+
+.PHONY: start-twitter
+start-twitter: start
+	docker-compose -f docker-compose.yml -f docker-compose-twitter.yml up -d
 
 .PHONY: clone-submodule
 clone-submodule: # clone submodules
 	git submodule update --init
+
+.PHONY: destroy
+destroy:
+	docker-compose down --remove-orphans
 
 .PHONY: hello-service
 hello-service: # starts hello service
@@ -56,10 +72,6 @@ twitter-jdbc: # deploys kafka jdbc sink connector to postgres
 twitter-console: # starts the kafka streams processor to parse json to avro
 	cd twitter-console-consumer/; \
 	java -jar target/twitter-console-consumer.jar
-
-.PHONY: down
-down: # stop docker-compose
-	docker-compose down
 
 .PHONY: spigo-ui
 spigo-ui: # start spigo ui
