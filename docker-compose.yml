@@ -10,7 +10,6 @@ services:
     image: openzipkin/zipkin:2.11
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      JAVA_OPTS: "-Dlogging.level.zipkin=DEBUG -Dlogging.level.zipkin2=DEBUG"
       STORAGE_TYPE: cassandra3
       CASSANDRA_CONTACT_POINTS: zipkin-cassandra
     ports:
@@ -65,20 +64,3 @@ services:
     depends_on:
       - kafka
 
-  ksql-server:
-    image: confluentinc/cp-ksql-server:5.0.0
-    ports:
-    - 8088:8088
-    depends_on:
-    - kafka
-    - schema-registry
-    environment:
-      KSQL_CUB_KAFKA_TIMEOUT: 300
-      KSQL_BOOTSTRAP_SERVERS: kafka:9092
-      KSQL_LISTENERS: http://0.0.0.0:8088
-      KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
-      KSQL_KSQL_SERVICE_ID: confluent_rmoff_01
-      KSQL_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
-      KSQL_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
-    volumes:
-    - ./lib/kafka-interceptor-zipkin-0.1.1-SNAPSHOT.jar:/usr/share/java/ksql-server/kafka-interceptor-zipkin.jar

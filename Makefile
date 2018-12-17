@@ -73,6 +73,9 @@ twitter-console: # starts the kafka streams processor to parse json to avro
 	cd twitter-console-consumer/; \
 	java -jar target/twitter-console-consumer.jar
 
+download-deps:
+	wget -O lib/kafka-interceptor-zipkin.jar https://repo1.maven.org/maven2/no/sysco/middleware/kafka/kafka-interceptor-zipkin/0.3.1/kafka-interceptor-zipkin-0.3.1.jar
+
 .PHONY: spigo-ui
 spigo-ui: # start spigo ui
 	cd spigo/ui/; \
