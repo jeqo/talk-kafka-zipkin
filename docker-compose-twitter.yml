@@ -41,6 +41,7 @@ services:
       CONNECT_PRODUCER_CLIENT_ID: twitter-connector
       CONNECT_PRODUCER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor'
       CONNECT_CONSUMER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor'
+      CONNECT_PRODUCER_ZIPKIN_LOCAL_SERVICE_NAME: "twitter-source-connect"
     volumes:
       - ./lib/kafka-interceptor-zipkin.jar:/etc/kafka-connect/jars/kafka-interceptor-zipkin.jar
     depends_on:
@@ -72,6 +73,7 @@ services:
       CONNECT_PRODUCER_CLIENT_ID: twitter-connector
       CONNECT_PRODUCER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor'
       CONNECT_CONSUMER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor'
+      CONNECT_PRODUCER_ZIPKIN_LOCAL_SERVICE_NAME: "tweets-jdbc-sink-connect"
     volumes:
       - ./lib/kafka-interceptor-zipkin.jar:/etc/kafka-connect/jars/kafka-interceptor-zipkin.jar
     depends_on:
