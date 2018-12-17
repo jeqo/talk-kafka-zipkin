@@ -22,6 +22,7 @@ Build applications and starts Docker compose environment:
 
 ```
 make
+make start
 ```
 
 ## Lab 1: Hello world distributed tracing

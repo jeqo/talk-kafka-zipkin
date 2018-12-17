@@ -11,7 +11,7 @@
     "value.converter.schemas.enable": false,
     "key.converter.schemas.enable": false,
     "kafka.delete.topic": "twitter_deletes_json_01",
-    "kafka.status.topic": "twitter_json_01",
+    "kafka.status.topic": "twitter_json_v1",
     "process.deletes": true,
     "filter.keywords": "java,big,data,kafka"
   }

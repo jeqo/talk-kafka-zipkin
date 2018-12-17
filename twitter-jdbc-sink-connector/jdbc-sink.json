@@ -1,14 +1,14 @@
 {
-  "name": "jdbc_sink_avro_v01",
+  "name": "jdbc_sink_avro_v1",
   "config": {
     "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
     "tasks.max": "1",
-    "topics": "twitter_avro_v01",
+    "topics": "twitter_avro_v1",
     "connection.url": "jdbc:postgresql://postgres/postgres",
     "connection.user": "postgres",
     "connection.password": "example",
     "auto.create": "true",
-    "name": "jdbc_sink_avro_v01",
+    "name": "jdbc_sink_avro_v1",
     "errors.log.enable": true
   }
 }
