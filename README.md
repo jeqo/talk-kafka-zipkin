@@ -6,12 +6,9 @@ Slides: <https://speakerdeck.com/jeqo/the-importance-of-observability-for-kafka-
 
 ## Labs
 
-1. Hello world distributed tracing: Understand basics about distributed
-   tracing.
-2. Tracing Kafka-based apps: Instrumenting Kafka-based applications with
-   Zipkin.
-3. `Spigo` demo: How to experiment with Zipkin and models built on top of 
-Tracing data.
+1. Hello world distributed tracing: Understand basics about distributed tracing.
+2. Tracing Kafka-based apps: Instrumenting Kafka-based applications with Zipkin.
+3. `Spigo` demo: How to experiment with Zipkin and models built on top of Tracing data.
 
 ### Pre-requisites
 
@@ -22,18 +19,17 @@ Build applications and starts Docker compose environment:
 
 ```
 make
+make start
 ```
 
 ## Lab 1: Hello world distributed tracing
 
-This lab will introduce initial concepts about distributed tracing like Span,
-Trace and Context Propagation.
+This lab will introduce initial concepts about distributed tracing like Span, Trace and Context Propagation.
 
 ### Initial Scenario: Hello World Services
 
-There is a service called Hello World that is capable of say hi in different
-languages, by using a Hello Translation service, and return a response to
-a user.
+There is a service called Hello World that is capable of say hi in different languages, by using a Hello 
+Translation service, and return a response to a user.
 
 ```
 +--------+   +---------------+   +--------------------+
@@ -47,8 +43,7 @@ this operation will be traced, and the trace created by this execution is called
 the "Hello" word according to the request.
 
 As the `Translation Service` is also instrumented to trace the execution of its operations
-exposed via HTTP, then the execution of translation operation will create another 
-`span`.
+exposed via HTTP, then the execution of translation operation will create another `span`.
 
 For the translation span to be aware that is part of a bigger trace, it should receive
 some references of the parent trace. This will come as part of the HTTP Request. 
@@ -90,6 +85,12 @@ And check the details:
 
 ![](docs/hello-2.png)
 
+or explore new Zipkin UI, Zipkin Lense <http://localhost:8080/zipkin>:
+
+![](docs/hello-lense-1.png)
+
+![](docs/hello-lense-2.png)
+
 We have 2 spans: One created by the service operation exposed via HTTP interface, that 
 is the root `span` as is the first one of a trace. And there is a second child `span`
 that is created by the HTTP Client operation attempting to call the Translation Service.
@@ -124,12 +125,15 @@ from `translation-service`:
 
 ![](docs/hello-5.png)
 
+and in Zipkin-Lense:
+
+![](docs/hello-lense-3.png)
+
 The first 2 spans are created by the instrumentation for 
 [HTTP Client](https://github.com/openzipkin/brave/tree/master/instrumentation/httpclient) 
 and [HTTP Server](https://github.com/openzipkin/brave/tree/master/instrumentation/jersey-server):
 
-But the last one is created by using `brave` library (Zipkin instrumentation library for
-Java) directly on your code:
+But the last one is created by using `brave` library (Zipkin instrumentation library for Java) directly on your code:
 
 `TranslationResource.java`:
 
@@ -208,6 +212,8 @@ make hello-consumer
 
 ![](docs/hello-8.png)
 
+![](docs/hello-lense-4.png)
+
 > Benefit: Now we have evidence about how much time is taking for data to get downstream. 
 For instance, is the goal of adopting Kafka is to reduce latency on your data pipelines, here 
 is the evidence of how much latency you are saving, or not.
@@ -218,7 +224,7 @@ the parent span.
 
 ## Lab 02: Twitter Kafka-based application
 
-Kafka Platform provides different APIs to implement streaming applications. We have seen 
+Kafka platform provides different APIs to implement streaming applications. We have seen 
 in the Lab 01 that Brave offers instrumentation for Kafka Client library. In this Lab, we 
 will evaluate how to instrument the other APIs: Streams API and Connect API.
 
@@ -272,7 +278,7 @@ For Kafka Clients and Kafka Streams, as you implement the code, there are existi
 libraries to instrument them:
 
 - Kafka Clients (Producer/Consumer): <https://github.com/openzipkin/brave/tree/master/instrumentation/kafka-clients>
-- Kafka Streams (WIP): <https://github.com/openzipkin/brave/tree/master/instrumentation/kafka-streams>
+- Kafka Streams: <https://github.com/openzipkin/brave/tree/master/instrumentation/kafka-streams>
 
 For the case of Kafka Connectors, implementation is already done, but Kafka offers 
 an interface to inject some code before it produce records to Kafka, and before a 
@@ -281,7 +287,7 @@ record is consumed by consumers, called [Kafka Interceptors](https://cwiki.apach
 At [Sysco](https://github.com/sysco-middleware) we have developed an initial version of interceptors
 for Zipkin that reuse some of the logic of Kafka Instrumentation.
 
-- Kafka Interceptors for Kafka Connect, REST Proxy, etc (WIP): <https://github.com/sysco-middleware/kafka-interceptors/tree/master/zipkin> 
+- Kafka Interceptors for Kafka Connect, REST Proxy, etc (alpha version): <https://github.com/sysco-middleware/kafka-interceptors/tree/master/zipkin> 
 
 These interceptors have to be added to the classpath where connectors are running, and the pass them via configuration:
 
@@ -297,6 +303,8 @@ These interceptors have to be added to the classpath where connectors are runnin
 2. Deploy the Twitter Source Connector:
 
 ```
+make start-twitter
+# wait for connectors
 make twitter-source
 ```
 
@@ -310,27 +318,40 @@ Each span will represent each tweet that has been received by connector and sent
 It is just including the `on_send` method execution, that is not significant, but
 it brings Kafka Connectors into the distributed trace picture.
 
-2. Start the Stream Processing applications:
+2. Stream processor applications is instrumented to capture latency created by every task part of the stream-process:
 
-```
-make twitter-stream
+```java
+
+		final StreamsBuilder builder = new StreamsBuilder();
+		builder.stream(config.getString("topics.input-tweets-json"), Consumed.with(Serdes.String(), Serdes.String()))
+				.transform(kafkaStreamsTracing.map("parse_json",
+						(String key, String value) -> {
+							try {
+								return KeyValue.pair(key, objectMapper.readTree(value));
+							}
+							catch (Exception e) {
+								e.printStackTrace();
+								return KeyValue.pair(key, null);
+							}
+						}))
+				.filterNot((k, v) -> Objects.isNull(v))
+				.transformValues(kafkaStreamsTracing.mapValues("json_to_avro",
+						TwitterStreamProcessor::parseTweet))
+				.to(config.getString("topics.output-tweets-avro"));
 ```
 
-As you deploy Kafka-based applications, as they are instrumented, they will be added
-to the traces:
+As you deploy Kafka-based applications, as they are instrumented, they will be added to the traces:
 
 ![](docs/twitter-2.png)
+
+![Zipkin Lense](docs/twitter-lense-1.png)
 
 Here the stream processor is part of the picture.
 
 3. Let's now deploy the JDBC Sink Connector and the Console application:
 
 ```
-make twitter-jdbc
-```
-
-```
-make twitter-console
+make start-twitter
 ```
 
 ![](docs/twitter-3.png)
@@ -342,12 +363,16 @@ evidenced as part of a trace:
 
 > Benefit: we can see which is the part of the data pipelines that I can start tuning/refactoring.
 
-After recording traces from distributed components, you are storing real
+After recording traces from distributed components, you are storing actual
 behaviour from your systems. Now you have the opportunity of creating models on
 top of tracing data. One example is the service dependency model that comes out
 of the box from Zipkin:
 
 ![](docs/twitter-5.png)
+
+And Zipkin Lense includes an **awesome** Vizceral view from service dependencies:
+
+![](docs/twitter-lense-2.png)
 
 ## Lab 3: Spigo Simulation
 

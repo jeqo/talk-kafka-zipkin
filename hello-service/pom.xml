@@ -31,19 +31,32 @@
         <dependency>
             <groupId>io.zipkin.brave</groupId>
             <artifactId>brave-instrumentation-jersey-server</artifactId>
-            <version>${brave.version}</version>
         </dependency>
         <dependency>
             <groupId>io.zipkin.brave</groupId>
             <artifactId>brave-instrumentation-httpclient</artifactId>
-            <version>${brave.version}</version>
         </dependency>
         <dependency>
             <groupId>io.zipkin.reporter2</groupId>
             <artifactId>zipkin-sender-kafka11</artifactId>
-            <version>${zipkin-reporter.version}</version>
         </dependency>
     </dependencies>
 
-
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>0.10.0</version>
+                <configuration>
+                    <container>
+                        <args>
+                            <arg>server</arg>
+                            <arg>application.yml</arg>
+                        </args>
+                    </container>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

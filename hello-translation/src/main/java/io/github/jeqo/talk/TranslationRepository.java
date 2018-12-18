@@ -7,24 +7,27 @@ import java.util.concurrent.TimeUnit;
 
 class TranslationRepository {
 
-  private final static Map<String, String> helloTranslations = new HashMap<>();
-  private static final String DEFAULT_LANG = "en";
+	private final static Map<String, String> helloTranslations = new HashMap<>();
 
-  static {
-    helloTranslations.put("en", "Hello");
-    helloTranslations.put("es", "Hola");
-    helloTranslations.put("no", "Hallo");
-  }
+	private static final String DEFAULT_LANG = "en";
 
-  String find(String lang) {
-    String hello;
-    try {
-      TimeUnit.MILLISECONDS.sleep(new Random().nextInt(100) + 100);
-      hello = helloTranslations.getOrDefault(lang, helloTranslations.get("en"));
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-      hello = helloTranslations.get(DEFAULT_LANG);
-    }
-    return hello;
-  }
+	static {
+		helloTranslations.put("en", "Hello");
+		helloTranslations.put("es", "Hola");
+		helloTranslations.put("no", "Hallo");
+	}
+
+	String find(String lang) {
+		String hello;
+		try {
+			TimeUnit.MILLISECONDS.sleep(new Random().nextInt(100) + 100);
+			hello = helloTranslations.getOrDefault(lang, helloTranslations.get("en"));
+		}
+		catch (InterruptedException e) {
+			e.printStackTrace();
+			hello = helloTranslations.get(DEFAULT_LANG);
+		}
+		return hello;
+	}
+
 }

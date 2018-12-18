@@ -15,27 +15,28 @@ import java.util.Optional;
 @Path("translate")
 public class TranslationResource {
 
-  private final Tracer tracer;
-  private final TranslationRepository repository;
+	private final Tracer tracer;
 
-  TranslationResource(TranslationRepository repository) {
-    this.repository = repository;
-    tracer = Tracing.currentTracer();
-  }
+	private final TranslationRepository repository;
 
-  @GET
-  @Path("{lang}")
-  @Produces(MediaType.TEXT_PLAIN)
-  public Response translateHello(@PathParam("lang") final String lang) {
-    /* START CUSTOM INSTRUMENTATION */
-    final ScopedSpan span = tracer.startScopedSpan("query-repository");
-    span.annotate("started-query");
-    span.tag("lang", Optional.ofNullable(lang).orElse(""));
-    final String hello = repository.find(lang);
-    span.annotate("finished-query");
-    span.finish();
-    /* END CUSTOM INSTRUMENTATION */
-    return Response.ok(hello).build();
-  }
+	TranslationResource(TranslationRepository repository) {
+		this.repository = repository;
+		tracer = Tracing.currentTracer();
+	}
+
+	@GET
+	@Path("{lang}")
+	@Produces(MediaType.TEXT_PLAIN)
+	public Response translateHello(@PathParam("lang") final String lang) {
+		/* START CUSTOM INSTRUMENTATION */
+		final ScopedSpan span = tracer.startScopedSpan("query-repository");
+		span.annotate("started-query");
+		span.tag("lang", Optional.ofNullable(lang).orElse(""));
+		final String hello = repository.find(lang);
+		span.annotate("finished-query");
+		span.finish();
+		/* END CUSTOM INSTRUMENTATION */
+		return Response.ok(hello).build();
+	}
 
 }

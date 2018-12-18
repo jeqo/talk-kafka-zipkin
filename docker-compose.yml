@@ -1,15 +1,37 @@
 ---
 version: '3'
 services:
+  zipkin-cassandra:
+    image: openzipkin/zipkin-cassandra:2.11
+    hostname: zipkin-cassandra
+    ports:
+      - 9042:9042
   zipkin:
     image: openzipkin/zipkin:2.11
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      JAVA_OPTS: "-Dlogging.level.zipkin=DEBUG -Dlogging.level.zipkin2=DEBUG"
+      STORAGE_TYPE: cassandra3
+      CASSANDRA_CONTACT_POINTS: zipkin-cassandra
     ports:
       - 9411:9411
     depends_on:
       - kafka
+  zipkin-ui:
+    image: openzipkin/zipkin-ui:2.11
+    environment:
+      ZIPKIN_BASE_URL: http://zipkin:9411
+    ports:
+      - 8080:80
+  zipkin-dependency-streaming:
+    image: syscomiddleware/zipkin-dependencies-streaming:0.1.4
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      STORAGE_TYPE: CASSANDRA
+      CASSANDRA_CONTACT_POINTS: zipkin-cassandra
+      CASSANDRA_KEYSPACE: zipkin2
+    depends_on:
+      - zipkin
+      - zipkin-cassandra
   zookeeper:
     image: confluentinc/cp-zookeeper:5.0.0
     ports:
@@ -41,90 +63,4 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
     depends_on:
       - kafka
-  twitter-connect:
-    image: syscomiddleware/cp-kafka-connect:5.0.0-0.1
-    build:
-      context: docker-images/confluent-kafka-connect
-    ports:
-      - 8083:8083
-    environment:
-      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
-      CONNECT_REST_ADVERTISED_HOST_NAME: localhost
-      CONNECT_REST_PORT: 8083
-      CONNECT_GROUP_ID: twitter-connect
-      CONNECT_CONFIG_STORAGE_TOPIC: twitter-connect-configs
-      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
-      CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
-      CONNECT_OFFSET_STORAGE_TOPIC: twitter-connect-offsets
-      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
-      CONNECT_STATUS_STORAGE_TOPIC: twitter-connect-status
-      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
-      CONNECT_KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
-      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
-      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
-      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
-      CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-      CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-      CONNECT_ZOOKEEPER_CONNECT: zookeeper:2181
-      CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
-      CONNECT_PRODUCER_CLIENT_ID: twitter-connector
-      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor'
-      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor'
-    depends_on:
-      - schema-registry
-  jdbc-connect:
-    image: syscomiddleware/cp-kafka-connect:5.0.0-0.1
-    build:
-      context: docker-images/confluent-kafka-connect
-    ports:
-      - 8084:8084
-    environment:
-      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
-      CONNECT_REST_ADVERTISED_HOST_NAME: localhost
-      CONNECT_REST_PORT: 8084
-      CONNECT_GROUP_ID: jdbc-connect
-      CONNECT_CONFIG_STORAGE_TOPIC: jdbc-connect-configs
-      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
-      CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
-      CONNECT_OFFSET_STORAGE_TOPIC: jdbc-connect-offsets
-      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
-      CONNECT_STATUS_STORAGE_TOPIC: jdbc-connect-status
-      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
-      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
-      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
-      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
-      CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-      CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
-      CONNECT_ZOOKEEPER_CONNECT: zookeeper:2181
-      CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
-      CONNECT_PRODUCER_CLIENT_ID: twitter-connector
-      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor'
-      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor'
-    depends_on:
-      - schema-registry
-  postgres:
-    image: postgres
-    environment:
-      POSTGRES_PASSWORD: example
-  adminer:
-    image: adminer
-    ports:
-    - 18080:8080
 
-  ksql-server:
-    image: confluentinc/cp-ksql-server:5.0.0
-    ports:
-    - 8088:8088
-    depends_on:
-    - kafka
-    - schema-registry
-    environment:
-      KSQL_CUB_KAFKA_TIMEOUT: 300
-      KSQL_BOOTSTRAP_SERVERS: kafka:9092
-      KSQL_LISTENERS: http://0.0.0.0:8088
-      KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
-      KSQL_KSQL_SERVICE_ID: confluent_rmoff_01
-      KSQL_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
-      KSQL_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
-    volumes:
-    - ./lib/kafka-interceptor-zipkin-0.1.1-SNAPSHOT.jar:/usr/share/java/ksql-server/kafka-interceptor-zipkin.jar

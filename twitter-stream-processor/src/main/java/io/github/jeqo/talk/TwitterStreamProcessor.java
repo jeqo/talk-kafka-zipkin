@@ -1,11 +1,12 @@
 package io.github.jeqo.talk;
 
 import brave.Tracing;
-import brave.kafka.clients.KafkaTracing;
 import brave.kafka.streams.KafkaStreamsTracing;
 import brave.sampler.Sampler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.github.jeqo.talk.avro.Tweet;
@@ -16,61 +17,69 @@ import zipkin2.Span;
 import zipkin2.reporter.AsyncReporter;
 import zipkin2.reporter.kafka11.KafkaSender;
 
-import java.io.IOException;
 import java.util.Objects;
 import java.util.Properties;
 
 public class TwitterStreamProcessor {
 
-  public static void main(String[] args) {
-    final ObjectMapper objectMapper = new ObjectMapper();
+	public static void main(String[] args) {
+		final ObjectMapper objectMapper = new ObjectMapper();
 
-    /* START TRACING INSTRUMENTATION */
-    final KafkaSender sender = KafkaSender.newBuilder().bootstrapServers("localhost:29092").build();
-    final AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build();
-    final Tracing tracing =
-        Tracing.newBuilder()
-            .localServiceName("stream-transform")
-            .sampler(Sampler.ALWAYS_SAMPLE)
-            .spanReporter(reporter)
-            .build();
-    final KafkaTracing kafkaTracing = KafkaTracing.newBuilder(tracing).remoteServiceName("kafka").build();
-    /* END TRACING INSTRUMENTATION */
+		final Config config = ConfigFactory.load();
+		final String kafkaBootstrapServers = config.getString("kafka.bootstrap-servers");
 
-    final Properties config = new Properties();
-    config.setProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:29092");
-    config.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "stream-transform-v02");
-    config.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-    config.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
-    config.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://localhost:8081");
+		/* START TRACING INSTRUMENTATION */
+		final KafkaSender sender = KafkaSender.newBuilder()
+				.bootstrapServers(kafkaBootstrapServers).build();
+		final AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build();
+		final Tracing tracing = Tracing.newBuilder().localServiceName("stream-transform")
+				.sampler(Sampler.ALWAYS_SAMPLE).spanReporter(reporter).build();
+		final KafkaStreamsTracing kafkaStreamsTracing = KafkaStreamsTracing
+				.create(tracing);
+		/* END TRACING INSTRUMENTATION */
 
-    final StreamsBuilder builder = new StreamsBuilder();
-    builder.stream("twitter_json_01", Consumed.with(Serdes.String(), Serdes.String()))
-        .mapValues(value -> {
-          try {
-            return objectMapper.readTree(value);
-          } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-          }
-        })
-        .filterNot((k, v) -> Objects.isNull(v))
-        .mapValues((k, v) -> parseTweet(v))
-        .to("twitter_avro_v01");
+		final Properties streamsConfig = new Properties();
+		streamsConfig.setProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG,
+				kafkaBootstrapServers);
+		streamsConfig.setProperty(StreamsConfig.APPLICATION_ID_CONFIG,
+				"stream-transform-v03");
+		streamsConfig.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG,
+				Serdes.String().getClass().getName());
+		streamsConfig.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG,
+				SpecificAvroSerde.class);
+		streamsConfig.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
+				config.getString("schema-registry.url"));
 
-    final Topology topology = builder.build();
-    final KafkaStreamsTracing kafkaStreamsTracing = KafkaStreamsTracing.create(tracing);
-    final KafkaStreams kafkaStreams = kafkaStreamsTracing.kafkaStreams(topology, config);
-    kafkaStreams.start();
+		final StreamsBuilder builder = new StreamsBuilder();
+		builder.stream(config.getString("topics.input-tweets-json"),
+				Consumed.with(Serdes.String(), Serdes.String()))
+				.transform(kafkaStreamsTracing.map("parse_json",
+						(String key, String value) -> {
+							try {
+								return KeyValue.pair(key, objectMapper.readTree(value));
+							}
+							catch (Exception e) {
+								e.printStackTrace();
+								return KeyValue.pair(key, null);
+							}
+						}))
+				.filterNot((k, v) -> Objects.isNull(v))
+				.transformValues(kafkaStreamsTracing.mapValues("json_to_avro",
+						TwitterStreamProcessor::parseTweet))
+				.to(config.getString("topics.output-tweets-avro"));
 
-    Runtime.getRuntime().addShutdownHook(new Thread(kafkaStreams::close));
-  }
+		final Topology topology = builder.build();
+		final KafkaStreams kafkaStreams = kafkaStreamsTracing.kafkaStreams(topology,
+				streamsConfig);
+		kafkaStreams.start();
 
-  private static Tweet parseTweet(JsonNode jsonValue) {
-    return Tweet.newBuilder()
-        .setText(jsonValue.get("Text").textValue())
-        .setLang(jsonValue.get("Lang").textValue())
-        .setUsername(jsonValue.get("User").get("ScreenName").textValue())
-        .build();
-  }
+		Runtime.getRuntime().addShutdownHook(new Thread(kafkaStreams::close));
+	}
+
+	private static Tweet parseTweet(JsonNode jsonValue) {
+		return Tweet.newBuilder().setText(jsonValue.get("Text").textValue())
+				.setLang(jsonValue.get("Lang").textValue())
+				.setUsername(jsonValue.get("User").get("ScreenName").textValue()).build();
+	}
+
 }

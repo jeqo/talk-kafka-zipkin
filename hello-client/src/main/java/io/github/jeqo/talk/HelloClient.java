@@ -6,6 +6,8 @@ import brave.http.HttpTracing;
 import brave.httpclient.TracingHttpClientBuilder;
 import brave.kafka.clients.KafkaTracing;
 import brave.sampler.Sampler;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
@@ -26,54 +28,63 @@ import java.util.Properties;
 import static org.apache.kafka.clients.producer.ProducerConfig.*;
 
 public class HelloClient {
-  public static void main(String[] args) throws InterruptedException, IOException {
 
-    /* START TRACING INSTRUMENTATION */
-    final KafkaSender sender = KafkaSender.newBuilder().bootstrapServers("localhost:29092").build();
-    final AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build();
-    final Tracing tracing =
-        Tracing.newBuilder()
-            .localServiceName("hello-client")
-            .sampler(Sampler.ALWAYS_SAMPLE)
-            .spanReporter(reporter)
-            .build();
-    final HttpTracing httpTracing = HttpTracing.newBuilder(tracing).build();
-    final KafkaTracing kafkaTracing = KafkaTracing.newBuilder(tracing).remoteServiceName("kafka").build();
-    final Tracer tracer = Tracing.currentTracer();
-    /* END TRACING INSTRUMENTATION */
+	public static void main(String[] args) throws InterruptedException, IOException {
 
-    final HttpClient httpClient = TracingHttpClientBuilder.create(httpTracing).build();
+		final Config config = ConfigFactory.load();
+		final String kafkaBootstrapServers = config.getString("kafka.bootstrap-servers");
 
-    final Properties producerConfigs = new Properties();
-    producerConfigs.setProperty(BOOTSTRAP_SERVERS_CONFIG, "localhost:29092");
-    producerConfigs.setProperty(KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-    producerConfigs.setProperty(VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-    final Producer<String, String> kafkaProducer = new KafkaProducer<>(producerConfigs);
-    final Producer<String, String> tracedKafkaProducer = kafkaTracing.producer(kafkaProducer);
+		/* START TRACING INSTRUMENTATION */
+		final KafkaSender sender = KafkaSender.newBuilder()
+				.bootstrapServers(kafkaBootstrapServers).build();
+		final AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build();
+		final Tracing tracing = Tracing.newBuilder().localServiceName("hello-client")
+				.sampler(Sampler.ALWAYS_SAMPLE).spanReporter(reporter).build();
+		final HttpTracing httpTracing = HttpTracing.newBuilder(tracing).build();
+		final KafkaTracing kafkaTracing = KafkaTracing.newBuilder(tracing)
+				.remoteServiceName("kafka").build();
+		final Tracer tracer = Tracing.currentTracer();
+		/* END TRACING INSTRUMENTATION */
 
-    final List<String> names = Arrays.asList("Jorge", "Eliana", "Jon", "Robin", "Jun", "Neha");
+		final HttpClient httpClient = TracingHttpClientBuilder.create(httpTracing)
+				.build();
 
-    /* START OPERATION */
-    brave.ScopedSpan batchSpan = tracer.startScopedSpan("call-hello-batch");
-    batchSpan.annotate("batch started");
-    for (String name : names) {
-      brave.ScopedSpan span = tracer.startScopedSpan("call-hello");
-      span.tag("name", name);
-      span.annotate("starting operation");
-      final HttpResponse response =
-          httpClient.execute(new HttpGet("http://localhost:18000/hello/" + name));
+		final Properties producerConfigs = new Properties();
+		producerConfigs.setProperty(BOOTSTRAP_SERVERS_CONFIG, kafkaBootstrapServers);
+		producerConfigs.setProperty(KEY_SERIALIZER_CLASS_CONFIG,
+				StringSerializer.class.getName());
+		producerConfigs.setProperty(VALUE_SERIALIZER_CLASS_CONFIG,
+				StringSerializer.class.getName());
+		final Producer<String, String> kafkaProducer = new KafkaProducer<>(
+				producerConfigs);
+		final Producer<String, String> tracedKafkaProducer = kafkaTracing
+				.producer(kafkaProducer);
+		final String baseUrl = config.getString("hello-service.base-url");
 
-      final String hello = EntityUtils.toString(response.getEntity());
+		/* START OPERATION */
+		brave.ScopedSpan batchSpan = tracer.startScopedSpan("call-hello-batch");
+		final List<String> names = Arrays.asList("Jorge", "Eliana", "Jon", "Robin", "Jun",
+				"Neha");
+		batchSpan.annotate("batch started");
+		for (String name : names) {
+			brave.ScopedSpan span = tracer.startScopedSpan("call-hello");
+			span.tag("name", name);
+			span.annotate("starting operation");
+			final HttpResponse response = httpClient
+					.execute(new HttpGet(baseUrl + "/hello/" + name));
 
-      span.annotate("sending message to kafka");
-      tracedKafkaProducer.send(new ProducerRecord<>("hello", hello));
-      span.annotate("complete operation");
-      span.finish();
-    }
-    batchSpan.annotate("batch completed");
-    batchSpan.finish();
-    /* END OPERATION */
+			final String hello = EntityUtils.toString(response.getEntity());
 
-    Thread.sleep(10_000);
-  }
+			span.annotate("sending message to kafka");
+			tracedKafkaProducer.send(new ProducerRecord<>("hello", hello));
+			span.annotate("complete operation");
+			span.finish();
+		}
+		batchSpan.annotate("batch completed");
+		batchSpan.finish();
+		/* END OPERATION */
+
+		Thread.sleep(10_000);
+	}
+
 }
