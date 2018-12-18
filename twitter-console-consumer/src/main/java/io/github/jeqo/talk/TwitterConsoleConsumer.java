@@ -54,7 +54,8 @@ public class TwitterConsoleConsumer {
 		final Consumer<String, Tweet> tracingConsumer = kafkaTracing
 				.consumer(kafkaConsumer);
 
-		tracingConsumer.subscribe(Collections.singletonList("twitter_avro_v01"));
+		tracingConsumer.subscribe(
+				Collections.singletonList(config.getString("topics.input_tweets")));
 
 		while (!Thread.interrupted()) {
 			final ConsumerRecords<String, Tweet> records = tracingConsumer

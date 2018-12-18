@@ -51,7 +51,7 @@ public class TwitterStreamProcessor {
 				config.getString("schema-registry.url"));
 
 		final StreamsBuilder builder = new StreamsBuilder();
-		builder.stream(config.getString("topics.input-tweets"),
+		builder.stream(config.getString("topics.input-tweets-json"),
 				Consumed.with(Serdes.String(), Serdes.String()))
 				.transform(kafkaStreamsTracing.map("parse_json",
 						(String key, String value) -> {
@@ -66,7 +66,7 @@ public class TwitterStreamProcessor {
 				.filterNot((k, v) -> Objects.isNull(v))
 				.transformValues(kafkaStreamsTracing.mapValues("json_to_avro",
 						TwitterStreamProcessor::parseTweet))
-				.to("twitter_avro_v01");
+				.to(config.getString("topics.output-tweets-avro"));
 
 		final Topology topology = builder.build();
 		final KafkaStreams kafkaStreams = kafkaStreamsTracing.kafkaStreams(topology,
