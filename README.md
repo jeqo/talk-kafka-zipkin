@@ -249,6 +249,9 @@ will send records to PostgreSQL, and another consumer will print records to cons
                                                                   |  +--------------+
                                                                   +->| Consumer App |
                                                                      +--------------+
+                                                                  |  +------+
+                                                                  +->| KSQL |
+                                                                     +------+
 ```
 
 **Choreography view**:
@@ -269,6 +272,11 @@ will send records to PostgreSQL, and another consumer will print records to cons
                |          |    +--------------+    +---------+
                |          |--->| Consumer App |--->| Console |
                |          |    +--------------+    +---------+
+               |          |
+               |          |    +------+
+               |          |--->| KSQL |
+               |          |    +------+
+               |          |
                +----------+
 ```
 
@@ -363,6 +371,20 @@ evidenced as part of a trace:
 
 > Benefit: we can see which is the part of the data pipelines that I can start tuning/refactoring.
 
+4. Finally, let's create a KSQL Stream to see how we can observe messages from Twitter to KSQL with Zipkin.
+
+```bash
+ksql http://localhost:8088
+
+ksql> create stream twitter_avro_v1 (text varchar, username varchar, lang varchar) with (kafka_topic='twitter_avro_v1', value_format='AVRO');
+
+ksql> select username from twitter_avro_v1;
+```
+
+Go to Zipkin Lense and check traces been collected from KSQL via interceptors:
+
+![](docs/twitter-lense-4.png)
+
 After recording traces from distributed components, you are storing actual
 behaviour from your systems. Now you have the opportunity of creating models on
 top of tracing data. One example is the service dependency model that comes out
@@ -373,6 +395,8 @@ of the box from Zipkin:
 And Zipkin Lense includes an **awesome** Vizceral view from service dependencies:
 
 ![](docs/twitter-lense-2.png)
+
+![](docs/twitter-lense-3.png)
 
 ## Lab 3: Spigo Simulation
 

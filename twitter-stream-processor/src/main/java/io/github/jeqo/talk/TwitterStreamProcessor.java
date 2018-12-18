@@ -21,9 +21,9 @@ import java.util.Objects;
 import java.util.Properties;
 
 public class TwitterStreamProcessor {
+	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	public static void main(String[] args) {
-		final ObjectMapper objectMapper = new ObjectMapper();
 
 		final Config config = ConfigFactory.load();
 		final String kafkaBootstrapServers = config.getString("kafka.bootstrap-servers");
@@ -54,16 +54,9 @@ public class TwitterStreamProcessor {
 		builder.stream(config.getString("topics.input-tweets-json"),
 				Consumed.with(Serdes.String(), Serdes.String()))
 				.transform(kafkaStreamsTracing.map("parse_json",
-						(String key, String value) -> {
-							try {
-								return KeyValue.pair(key, objectMapper.readTree(value));
-							}
-							catch (Exception e) {
-								e.printStackTrace();
-								return KeyValue.pair(key, null);
-							}
-						}))
+						TwitterStreamProcessor::parseJson))
 				.filterNot((k, v) -> Objects.isNull(v))
+				.filter(TwitterStreamProcessor::hasHashtag)
 				.transformValues(kafkaStreamsTracing.mapValues("json_to_avro",
 						TwitterStreamProcessor::parseTweet))
 				.to(config.getString("topics.output-tweets-avro"));
@@ -74,6 +67,20 @@ public class TwitterStreamProcessor {
 		kafkaStreams.start();
 
 		Runtime.getRuntime().addShutdownHook(new Thread(kafkaStreams::close));
+	}
+
+	private static KeyValue<String, JsonNode> parseJson(String key, String value) {
+			try {
+				return KeyValue.pair(key, OBJECT_MAPPER.readTree(value));
+			}
+			catch (Exception e) {
+				e.printStackTrace();
+				return KeyValue.pair(key, null);
+			}
+	}
+
+	private static boolean hasHashtag(String key, JsonNode value) {
+		return true;
 	}
 
 	private static Tweet parseTweet(JsonNode jsonValue) {
