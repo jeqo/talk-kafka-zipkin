@@ -2,12 +2,12 @@
 version: '3'
 services:
   zipkin-cassandra:
-    image: openzipkin/zipkin-cassandra:2.11
+    image: openzipkin/zipkin-cassandra:2.12
     hostname: zipkin-cassandra
     ports:
       - 9042:9042
   zipkin:
-    image: openzipkin/zipkin:2.11
+    image: openzipkin/zipkin:2.12
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       STORAGE_TYPE: cassandra3
@@ -17,7 +17,7 @@ services:
     depends_on:
       - kafka
   zipkin-ui:
-    image: openzipkin/zipkin-ui:2.11
+    image: openzipkin/zipkin-ui:2.12
     environment:
       ZIPKIN_BASE_URL: http://zipkin:9411
     ports:
@@ -33,14 +33,14 @@ services:
       - zipkin
       - zipkin-cassandra
   zookeeper:
-    image: confluentinc/cp-zookeeper:5.0.0
+    image: confluentinc/cp-zookeeper:5.1.0
     ports:
       - 2181:2181
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
   kafka:
-    image: confluentinc/cp-kafka:5.0.0
+    image: confluentinc/cp-kafka:5.1.0
     ports:
       - 9092:9092
       - 29092:29092
@@ -54,7 +54,7 @@ services:
     depends_on:
       - zookeeper
   schema-registry:
-    image: confluentinc/cp-schema-registry:5.0.0
+    image: confluentinc/cp-schema-registry:5.1.0
     ports:
       - 8081:8081
     environment:

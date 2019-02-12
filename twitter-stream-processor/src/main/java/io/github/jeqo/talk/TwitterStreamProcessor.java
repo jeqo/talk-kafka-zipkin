@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.Properties;
 
 public class TwitterStreamProcessor {
+
 	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	public static void main(String[] args) {
@@ -70,13 +71,13 @@ public class TwitterStreamProcessor {
 	}
 
 	private static KeyValue<String, JsonNode> parseJson(String key, String value) {
-			try {
-				return KeyValue.pair(key, OBJECT_MAPPER.readTree(value));
-			}
-			catch (Exception e) {
-				e.printStackTrace();
-				return KeyValue.pair(key, null);
-			}
+		try {
+			return KeyValue.pair(key, OBJECT_MAPPER.readTree(value));
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			return KeyValue.pair(key, null);
+		}
 	}
 
 	private static boolean hasHashtag(String key, JsonNode value) {

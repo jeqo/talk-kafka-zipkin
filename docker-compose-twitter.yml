@@ -46,14 +46,14 @@ services:
       CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
       CONNECT_PRODUCER_CLIENT_ID: twitter-connector
       CONNECT_PRODUCER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor'
-      CONNECT_PRODUCER_ZIPKIN_LOCAL_SERVICE_NAME: "twitter-source-connect"
+      CONNECT_PRODUCER_ZIPKIN_LOCAL_SERVICE_NAME: "kafka-connect-twitter"
     volumes:
       - ./lib/kafka-interceptor-zipkin.jar:/etc/kafka-connect/jars/kafka-interceptor-zipkin.jar
     depends_on:
       - schema-registry
 
   jdbc-connect:
-    image: confluentinc/cp-kafka-connect:5.0.0
+    image: confluentinc/cp-kafka-connect:5.1.0
     ports:
       - 8084:8084
     environment:
@@ -76,7 +76,7 @@ services:
       CONNECT_ZOOKEEPER_CONNECT: zookeeper:2181
       CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
       CONNECT_CONSUMER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor'
-      CONNECT_PRODUCER_ZIPKIN_LOCAL_SERVICE_NAME: "tweets-jdbc-sink-connect"
+      CONNECT_CONSUMER_ZIPKIN_LOCAL_SERVICE_NAME: "kafka-connect-jdbc"
     volumes:
       - ./lib/kafka-interceptor-zipkin.jar:/etc/kafka-connect/jars/kafka-interceptor-zipkin.jar
     depends_on:
@@ -92,7 +92,7 @@ services:
       - 18080:8080
 
   ksql-server:
-    image: confluentinc/cp-ksql-server:5.0.0
+    image: confluentinc/cp-ksql-server:5.1.0
     ports:
     - 8088:8088
     depends_on:
@@ -106,7 +106,6 @@ services:
       KSQL_KSQL_SERVICE_ID: tweets-ksql
       KSQL_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
       KSQL_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
-      KSQL_PRODUCER_ZIPKIN_LOCAL_SERVICE_NAME: "tweets-ksql"
-      KSQL_CONSUMER_ZIPKIN_LOCAL_SERVICE_NAME: "tweets-ksql"
+      ZIPKIN_LOCAL_SERVICE_NAME: "ksql"
     volumes:
     - ./lib/kafka-interceptor-zipkin.jar:/usr/share/java/ksql-server/kafka-interceptor-zipkin.jar
