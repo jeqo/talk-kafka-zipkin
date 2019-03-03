@@ -44,9 +44,9 @@ services:
       CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       CONNECT_ZOOKEEPER_CONNECT: zookeeper:2181
       CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
-      CONNECT_PRODUCER_CLIENT_ID: twitter-connector
-      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor'
+      CONNECT_PRODUCER_ZIPKIN_SENDER_TYPE: "KAFKA"
       CONNECT_PRODUCER_ZIPKIN_LOCAL_SERVICE_NAME: "kafka-connect-twitter"
+      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
     volumes:
       - ./lib/kafka-interceptor-zipkin.jar:/etc/kafka-connect/jars/kafka-interceptor-zipkin.jar
     depends_on:
@@ -75,8 +75,9 @@ services:
       CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       CONNECT_ZOOKEEPER_CONNECT: zookeeper:2181
       CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
-      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor'
+      CONNECT_CONSUMER_ZIPKIN_SENDER_TYPE: "KAFKA"
       CONNECT_CONSUMER_ZIPKIN_LOCAL_SERVICE_NAME: "kafka-connect-jdbc"
+      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
     volumes:
       - ./lib/kafka-interceptor-zipkin.jar:/etc/kafka-connect/jars/kafka-interceptor-zipkin.jar
     depends_on:
@@ -104,8 +105,11 @@ services:
       KSQL_LISTENERS: http://0.0.0.0:8088
       KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       KSQL_KSQL_SERVICE_ID: tweets-ksql
-      KSQL_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
+      KSQL_CONSUMER_ZIPKIN_SENDER_TYPE: "KAFKA"
+      KSQL_CONSUMER_ZIPKIN_LOCAL_SERVICE_NAME: "ksql"
       KSQL_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
-      ZIPKIN_LOCAL_SERVICE_NAME: "ksql"
+      KSQL_PRODUCER_ZIPKIN_SENDER_TYPE: "KAFKA"
+      KSQL_PRODUCER_ZIPKIN_LOCAL_SERVICE_NAME: "ksql"
+      KSQL_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
     volumes:
     - ./lib/kafka-interceptor-zipkin.jar:/usr/share/java/ksql-server/kafka-interceptor-zipkin.jar
