@@ -53,7 +53,7 @@ services:
       - schema-registry
 
   jdbc-connect:
-    image: confluentinc/cp-kafka-connect:5.1.0
+    image: confluentinc/cp-kafka-connect:5.1.2
     ports:
       - 8084:8084
     environment:

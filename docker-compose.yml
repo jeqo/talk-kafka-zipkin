@@ -2,29 +2,29 @@
 version: '3'
 services:
   zipkin:
-    image: jeqo/zipkin-kafka:0.1.5
+    image: jeqo/zipkin-kafka:0.2.0
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       STORAGE_TYPE: kafkastore
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
       - 9411:9411
     depends_on:
       - kafka
   zipkin-ui:
-    image: openzipkin/zipkin-ui:2.12
+    image: openzipkin/zipkin-ui:2.12.3
     environment:
       ZIPKIN_BASE_URL: http://zipkin:9411
     ports:
       - 8080:80
   zookeeper:
-    image: confluentinc/cp-zookeeper:5.1.0
+    image: confluentinc/cp-zookeeper:5.1.2
     ports:
       - 2181:2181
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
   kafka:
-    image: confluentinc/cp-kafka:5.1.0
+    image: confluentinc/cp-kafka:5.1.2
     ports:
       - 9092:9092
       - 29092:29092
@@ -38,7 +38,7 @@ services:
     depends_on:
       - zookeeper
   schema-registry:
-    image: confluentinc/cp-schema-registry:5.1.0
+    image: confluentinc/cp-schema-registry:5.1.2
     ports:
       - 8081:8081
     environment:
@@ -47,4 +47,3 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
     depends_on:
       - kafka
-
