@@ -93,7 +93,7 @@ services:
       - 18080:8080
 
   ksql-server:
-    image: confluentinc/cp-ksql-server:5.1.0
+    image: confluentinc/cp-ksql-server:5.1.2
     ports:
     - 8088:8088
     depends_on:
@@ -105,11 +105,10 @@ services:
       KSQL_LISTENERS: http://0.0.0.0:8088
       KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       KSQL_KSQL_SERVICE_ID: tweets-ksql
-      KSQL_CONSUMER_ZIPKIN_SENDER_TYPE: "KAFKA"
-      KSQL_CONSUMER_ZIPKIN_LOCAL_SERVICE_NAME: "ksql"
       KSQL_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
-      KSQL_PRODUCER_ZIPKIN_SENDER_TYPE: "KAFKA"
-      KSQL_PRODUCER_ZIPKIN_LOCAL_SERVICE_NAME: "ksql"
+      KSQL_ZIPKIN_SENDER_TYPE: "KAFKA"
+      KSQL_ZIPKIN_LOCAL_SERVICE_NAME: "ksql"
+      KSQL_ZIPKIN_BOOTSTRAP_SERVERS: kafka:9092
       KSQL_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
     volumes:
     - ./lib/kafka-interceptor-zipkin.jar:/usr/share/java/ksql-server/kafka-interceptor-zipkin.jar

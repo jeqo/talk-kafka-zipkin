@@ -2,7 +2,7 @@
 version: '3'
 services:
   zipkin:
-    image: jeqo/zipkin-kafka:0.2.0
+    image: jeqo/zipkin-kafka:0.2.1
     environment:
       STORAGE_TYPE: kafkastore
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
