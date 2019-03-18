@@ -241,30 +241,33 @@ In the case of Kafka Producers and Consumers, the instrumentation provided by Br
 injecting the trace context on the Kafka headers, so the consumers spans can reference to 
 the parent span.
 
-## Lab 02: Twitter Kafka-based application
+## Lab 02: Tracing Kafka-based application
 
 Kafka platform provides different APIs to implement streaming applications. We have seen 
-in the Lab 01 that Brave offers instrumentation for Kafka Client library. In this Lab, we 
-will evaluate how to instrument the other APIs: Streams API and Connect API.
+in the Lab 01 that `Brave` offers instrumentation for Kafka Client library. In this Lab, we 
+will evaluate how to instrument the other APIs: Streams API, Connect API and additional components
+like KSQL.
 
-To do this, we will introduce a use-case: 
+To do this, let's introduce a new use-case: 
 
-> We have applications developed around Tweets. First of all, we need to pull tweets
-from Twitter. Once we have Tweets available in our system, we need to parse them into 
-our preferred format, to then be consumed by many applications. 
+> We have applications developed around Twitter posts. First, we need to pull tweets
+from Twitter. Once we have tweets available in Kafka, we need to process them, to then 
+be consumed by many applications. 
 
-For this use-case we will use a [Twitter Source Connector](https://github.com/jcustenborder/kafka-connect-twitter)
-to pull tweets into Kafka. We will implement a Kafka Streams application to transform from JSON to Avro format.
-On the other side of Kafka, a [JDBC Source Connector](https://github.com/confluentinc/kafka-connect-jdbc)
-will send records to PostgreSQL, and another consumer will print records to console.
+Let's use [Kafka Twitter Connector](https://github.com/jcustenborder/kafka-connect-twitter)
+to pull tweets into Kafka. 
+Then, a Kafka Streams application transforms tweets from JSON into Avro format.
 
-**Data-flow view**:
+On the consumer side, a [Kafka JDBC Connector](https://github.com/confluentinc/kafka-connect-jdbc)
+will consumer and send records to PostgreSQL, along with other applications.
+
+**Data pipeline view**:
 
 ```
-+---------+   +-------------------+          +------------------+    +--------------+
-| Twitter |-->| Twitter Connector |-(Kafka)->| Stream Transform |-+->| DB Connector |
-+---------+   +-------------------+          +------------------+ |  +--------------+
-                                                               (kafka)
++---------+   +-------------------+          +------------------+    +----------------+
+| Twitter |-->| Twitter Connector |-(kafka)->| Stream Transform |-+->| JDBC Connector |
++---------+   +-------------------+          +------------------+ |  +----------------+
+                                                               (kafka) //other consumers
                                                                   |  +--------------+
                                                                   +->| Consumer App |
                                                                      +--------------+
@@ -273,33 +276,33 @@ will send records to PostgreSQL, and another consumer will print records to cons
                                                                      +------+
 ```
 
-**Choreography view**:
+**Event collaboration**:
 
 ```
                   Kafka
                +----------+
 +---------+    |          |    +------------------+
-| Twitter |--->|          |--->|                  |
+| Twitter |-1->|(raw-json)|-2->|                  |
 +---------+    |          |    | Stream Transform |
-               |          |<---|                  |
+               |( parsed )|<-3-|                  |
                |          |    +------------------+
                |          |
-               |          |    +--------------+    +------------+
-               |          |--->| DB Connector |--->| Postgresql |
-               |          |    +--------------+    +------------+
+               |          |       +--------------+    +------------+
+               |( parsed )|--4.1->| DB Connector |--->| Postgresql |
+               |          |       +--------------+    +------------+
                |          |
-               |          |    +--------------+    +---------+
-               |          |--->| Consumer App |--->| Console |
-               |          |    +--------------+    +---------+
+               |          |       +--------------+    +---------+
+               |( parsed )|--4.2->| Consumer App |--->| Console |
+               |          |       +--------------+    +---------+
                |          |
-               |          |    +------+
-               |          |--->| KSQL |
-               |          |    +------+
+               |          |       +------+
+               |( parsed )|--4.3->| KSQL |
+               |          |       +------+
                |          |
                +----------+
 ```
 
-### Instrumentation
+### Tracing Kafka Clients and Kafka Streams
 
 For Kafka Clients and Kafka Streams, as you implement the code, there are existing 
 libraries to instrument them:
@@ -307,20 +310,45 @@ libraries to instrument them:
 - Kafka Clients (Producer/Consumer): <https://github.com/openzipkin/brave/tree/master/instrumentation/kafka-clients>
 - Kafka Streams: <https://github.com/openzipkin/brave/tree/master/instrumentation/kafka-streams>
 
-For the case of Kafka Connectors, implementation is already done, but Kafka offers 
-an interface to inject some code before it produce records to Kafka, and before a 
-record is consumed by consumers, called [Kafka Interceptors](https://cwiki.apache.org/confluence/display/KAFKA/KIP-42%3A+Add+Producer+and+Consumer+Interceptors).
+### Tracing packaged Kafka applications
 
-At [Sysco](https://github.com/sysco-middleware) we have developed an initial version of interceptors
-for Zipkin that reuse some of the logic of Kafka Instrumentation.
+For the case of Kafka Connectors and other packaged applications 
+(e.g. [KSQL](https://www.confluent.io/product/ksql/), 
+[REST Proxy](https://docs.confluent.io/current/kafka-rest/docs/index.html)) 
+are already packaged. However, Kafka clients 
+include an API to inject code before messages are sent to Kafka, and before a 
+message is consumed by consumers, called [Kafka Interceptors](https://cwiki.apache.org/confluence/display/KAFKA/KIP-42%3A+Add+Producer+and+Consumer+Interceptors).
 
-- Kafka Interceptors for Kafka Connect, REST Proxy, etc (alpha version): <https://github.com/sysco-middleware/kafka-interceptors/tree/master/zipkin> 
+This interceptors create a space to introduce tracing code to mark when messages are sent and 
+consumed.
 
-These interceptors have to be added to the classpath where connectors are running, and the pass them via configuration:
+At [Sysco AS](https://github.com/sysco-middleware) we have developed interceptors
+for Zipkin: <https://github.com/sysco-middleware/kafka-interceptor-zipkin> 
 
+These interceptors have to be added to applications classpath, where can be referenced via properties:
+
+Producer:
+```java
+    producerConfig.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, Collections.singletonList(TracingProducerInterceptor.class));
+```
+
+Consumer:
+```java
+    consumerConfig.put(ConsumerConfig.INTERCEPTOR_CLASSES_CONFIG, Collections.singletonList(TracingConsumerInterceptor.class));
+```
+
+And Confluent Docker images:
+
+Connectors:
 ```yaml
       CONNECT_PRODUCER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor'
       CONNECT_CONSUMER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor'
+```
+
+KSQL:
+```yaml
+      KSQL_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
+      KSQL_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
 ```
 
 ### How to run it
