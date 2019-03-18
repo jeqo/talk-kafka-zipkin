@@ -1,6 +1,6 @@
 # Tracing Kafka-based applications with Zipkin
 
-Slides: <https://speakerdeck.com/jeqo/the-importance-of-observability-for-kafka-based-applications-with-zipkin>
+> Slides: <https://speakerdeck.com/jeqo/the-importance-of-observability-for-kafka-based-applications-with-zipkin>
 
 ## Labs
 
@@ -15,16 +15,16 @@ Slides: <https://speakerdeck.com/jeqo/the-importance-of-observability-for-kafka-
 
 Build applications and starts Docker compose environment: 
 
-```
+```bash
 make
 make start
 ```
 
-## Lab 1: Hello world distributed tracing
+## Lab 1: "Hello, world" distributed tracing
 
 This lab introduce initial concepts about distributed tracing like `span`, `trace` and `context-propagation`.
 
-### Scenario 1: Hello World Services
+### Scenario 1: "Hello, World" services (synchronous. RPC calls)
 
 There is a service called Hello World that is capable of say hi in different languages, by using a Hello 
 Translation service, and return a response to a user.
@@ -67,7 +67,7 @@ collect and aggregate spans to be stored for further processing.
 
 1. Start `hello-service` in one terminal:
 
-```
+```bash
 make hello-server
 ```
 
@@ -81,13 +81,13 @@ transaction: since a request is received and how it propagates.
 
 2. Make a call (that will produce an error as `translation` service is down):
 
-```
+```bash
 $ make test-hello
 ```
 
 or 
 
-```
+```bash
 $ curl http://localhost:18000/hello/service
 {"code":500,"message":"There was an error processing your request. It has been logged (ID f0cbd609d1b40741)."}
 ```
@@ -124,35 +124,28 @@ we have the HTTP verb, status code, path, etc.
 
 4. If we start the translation service, run in another terminal: 
 
-```
+```bash
 make hello-translation
 ```
 
 5. Now, try to call the `hello-service` via curl: 
 
-```
+```bash
 $ curl localhost:18000/hello/service
 {"hello":"Hello, service","lang":"en"}
 ```
 
-6. Check that a new trace is recorded, and it has 2 services collaborating: 
+A new trace is stored, but in this case it is successful and in the trace details, 
+you will see 3 spans, 1 from `hello` service, 1
+from `translation` service, and 1 combined between client/server call:
 
-![](docs/hello-4.png)
+![](docs/hello-3.png)
 
-And in the trace details, you will see 3 spans, 1 from `hello-service` and 2
-from `translation-service`:
+Client/Server and synchronous communication creates this parent-child trace representations, where empty
+spaces between spans represent processing and network latency that has not been recorded.
 
-![](docs/hello-5.png)
-
-and in Zipkin-Lense:
-
-![](docs/hello-lense-3.png)
-
-The first 2 spans are created by the instrumentation for 
-[HTTP Client](https://github.com/openzipkin/brave/tree/master/instrumentation/httpclient) 
-and [HTTP Server](https://github.com/openzipkin/brave/tree/master/instrumentation/jersey-server):
-
-But the last one is created by using `brave` library (Zipkin instrumentation library for Java) directly on your code:
+Spans can be created by using Tracing libraries. Zipkin has a Java library called `brave`, here is
+an example of how to create a span:
 
 `TranslationResource.java`:
 
@@ -169,19 +162,27 @@ But the last one is created by using `brave` library (Zipkin instrumentation lib
     span.annotate("finished-query");
     span.finish();
     /* END CUSTOM INSTRUMENTATION */
+    
     return Response.ok(hello).build();
   }
 ```
+
+But most spans are created by using *instrumented* libraries: instrumentation is wrapping libraries
+APIs, so you don't have to.
+
+The first 2 spans are created by the instrumentation for 
+[Apache HTTP Client](https://github.com/openzipkin/brave/tree/master/instrumentation/httpclient) 
+and [Jersey HTTP Server](https://github.com/openzipkin/brave/tree/master/instrumentation/jersey-server):
 
 By using existing libraries instrumentation you will get most of the picture on how 
 your service collaborate, but when you need to get details about an specific task part
 of your code, then you can add "custom" `spans`, so your debugging is more specific.
 
-### Scenario 2: Hello World Events
+Even though this is a too simple example, getting to know how a successful and failed executions look like increase confidence and reduce cognitive load.
 
-Instead of a web client, a Client application with implement a batch process 
-to call Hello Service and produce events into a Kafka Topic.
+### Scenario 2: "Hello, World" events (asynchronous, messaging)
 
+To explore how messaging and asynchronous executions are represented, let's test this use-case: 
 
 ```
 +--------+      +---------------+        +------------------+
@@ -195,50 +196,49 @@ to call Hello Service and produce events into a Kafka Topic.
 
 > (*) new components
 
-This scenario represents how to propagate context when you are not communicating 
-services directly by via messaging. In this case, we will use Kafka as an intermediate
-component to publish events.
+A batch hello client has a list of names to call `hello` service and get a response. 
+Responses are propagated as events, using a Kafka topic. A `hello consumer` subscribe and process
+`hello` events.
 
 #### How to run it
 
 1. Start the `hello-client`:
 
-```
+```bash
 make hello-client
 ```
 
 This will run the batch process to call `hello-service` 6 times in sequence.
 
-It will take around 15 secs. to execute.
+![](docs/hello-4.png)
 
-As this component is starting the trace, then `hello-service` and `hello-translation`
-spans will become children of this parent span:
-
-![](docs/hello-6.png)
-
-![](docs/hello-7.png)
-
-The messaging broker is defined as an external library here, as part of the `kafka-clients`
-instrumentation, so we can have it as part of the picture.
-
-> Interesting finding: first send operation by `kafka-client` Producer, is slower than the others.
+`hello-client` receives a response and `send` an event to Kafka. We can see for instance that the
+initial (*cold*) send take longer (~350ms) than the followings (~5ms).
 
 2. Now, let's start the consumer to see how its executions will become part of the trace:
 
-```
+```bash
 make hello-consumer
 ```
 
-![](docs/hello-8.png)
+And let's run client batch again:
 
-![](docs/hello-lense-4.png)
+```bash
+make hello-client
+```
+
+This time, let's focus on the initial spans by selecting this period on the timeline.
+We can see for instance that `hello-consumer` is polling and processing the event, taking a few
+nano seconds, and metadata as Kafka topic name and broker are collected.
+
+![](docs/hello-5.png)
 
 > Benefit: Now we have evidence about how much time is taking for data to get downstream. 
 For instance, is the goal of adopting Kafka is to reduce latency on your data pipelines, here 
 is the evidence of how much latency you are saving, or not.
 
 In the case of Kafka Producers and Consumers, the instrumentation provided by Brave is 
-injecting the trace context on the Kafka Headers, so the consumers spans can reference to 
+injecting the trace context on the Kafka headers, so the consumers spans can reference to 
 the parent span.
 
 ## Lab 02: Twitter Kafka-based application
