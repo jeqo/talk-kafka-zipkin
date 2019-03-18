@@ -1,19 +1,17 @@
-# Talk: Tracing Kafka-based applications with Zipkin
-
-Demo material from talk about tracing Kafka-based applications with Zipkin
+# Tracing Kafka-based applications with Zipkin
 
 Slides: <https://speakerdeck.com/jeqo/the-importance-of-observability-for-kafka-based-applications-with-zipkin>
 
 ## Labs
 
-1. Hello world distributed tracing: Understand basics about distributed tracing.
-2. Tracing Kafka-based apps: Instrumenting Kafka-based applications with Zipkin.
+1. "Hello, world" distributed tracing: Understanding basics about distributed tracing.
+2. Tracing Kafka-based applications: Instrumenting Kafka-based applications with Zipkin.
 3. `Spigo` demo: How to experiment with Zipkin and models built on top of Tracing data.
 
 ### Pre-requisites
 
 - jdk-8+
-- docker-engine, docker-compose
+- docker tools (docker-engine, docker-compose)
 
 Build applications and starts Docker compose environment: 
 
@@ -24,9 +22,9 @@ make start
 
 ## Lab 1: Hello world distributed tracing
 
-This lab will introduce initial concepts about distributed tracing like Span, Trace and Context Propagation.
+This lab introduce initial concepts about distributed tracing like `span`, `trace` and `context-propagation`.
 
-### Initial Scenario: Hello World Services
+### Scenario 1: Hello World Services
 
 There is a service called Hello World that is capable of say hi in different languages, by using a Hello 
 Translation service, and return a response to a user.
@@ -37,71 +35,92 @@ Translation service, and return a response to a user.
 +--------+   +---------------+   +--------------------+
 ```
 
-An HTTP Client will call the `Hello Service` expecting a greeting. The execution of 
-this operation will be traced, and the trace created by this execution is called a
-`span`. The Hello Service then will call then the Translation Service, to translate
-the "Hello" word according to the request.
+A client (http) calls the `Hello` service expecting a greeting response. 
+By tracing service operations, once a request is received and processed, spans are created. 
+`hello` service depends on a `translation` service, to translate responses.
 
-As the `Translation Service` is also instrumented to trace the execution of its operations
-exposed via HTTP, then the execution of translation operation will create another `span`.
+As the `translation` service has tracing enabled to record the execution of its operations, 
+then the execution of translation operation will create more `spans`.
 
-For the translation span to be aware that is part of a bigger trace, it should receive
-some references of the parent trace. This will come as part of the HTTP Request. 
-As the HTTP Client call from `Hello Service` is instrumented with tracing, it will "inject"
-the tracing context on the HTTP Headers.
+A `trace` is an aggregation of multiple spans that share a common `id`.
 
-The `Translation Service`, by receiving the trace context as part of the headers, will create 
-its spans with reference to that context.
+For instance, the `hello` service might trace the operation to receive a request and return a 
+response, and also trace the `translation` service client calls: since it calls it until a response
+is received, as a `child` span. 
+For this 2 `spans` to be related, both need some shared reference (e.g. `trace-id`).
 
-The instrumentation libraries will send the spans created to a tracing system, Zipkin in this case, 
-for it to recreate the complete trace from distributed spans. 
+For translation service spans to be aware that they are part of a broader trace, they should 
+as well receive some reference from a parent trace. 
+As the HTTP Client call from `hello` service is instrumented with tracing, it will "inject"
+the tracing context (e.g., `trace-id` and additional metadata) on the HTTP Headers.
+The `translation` service, by receiving the trace context as part of the headers, will create 
+its spans with reference to that context, with the same trace id.
+
+Tracing libraries are in charge of propagating the context between calls (e.g., when `hello` service
+creates a parent and child `spans`), and propagate context between service calls 
+(e.g, HTTP client/server, Kafka publisher/subscriber).
+
+These libraries record and report `spans` for the tracing infrastructure---Zipkin in this case--- 
+collect and aggregate spans to be stored for further processing.
 
 #### How to run it
 
 1. Start `hello-service` in one terminal:
 
 ```
-make hello-service
+make hello-server
 ```
 
-The service by itself is not enough to produce a successful -it requires the translation
-service. To know that is working successfully: you have to participate in a transaction
-(e.g. make a request), be watching the logs, or produce some evidence from instrumentation. 
+The `hello` service by itself is not enough to produce a successful response 
+---it requires the `translation` service. To know that is working successfully: 
+(1) you have to participate in a transaction
+(e.g. make a request), (2) be watching the logs, or (3) produce some evidence from instrumentation. 
 
-If you instrument your service for tracing correctly you will have evidence of each operation.
+By enabling tracing on your services, every execution will collect evidence on the scope of a 
+transaction: since a request is received and how it propagates.
 
-2. Make a call (that will produce an error):
+2. Make a call (that will produce an error as `translation` service is down):
 
 ```
-$ curl localhost:18000/hello/service
+$ make test-hello
+```
+
+or 
+
+```
+$ curl http://localhost:18000/hello/service
 {"code":500,"message":"There was an error processing your request. It has been logged (ID f0cbd609d1b40741)."}
 ```
 
-3. Go to Zipkin to check the traces <http://localhost:9411/>:
+3. And go to Zipkin to check the traces <http://localhost:9411/>:
+
+> new Zipkin UI released recently, called Zipkin Lens, has been used.
+
+Zipkin UI has 3 main pages: Search, Trace view, and Dependencies. We will explore each of them along 
+these demos.
+
+By searching all traces, one should be found that is the one created by our `curl` call:
 
 ![](docs/hello-1.png)
 
-And check the details:
+As `translation` service is down, trace is mark as `error`. We can also observe that 2 spans are
+part of this trace; that the total execution took 240 ms. and that it has been identified by a 
+generated trace id.
+
+Let's take a look to the trace details. On Zipkin Lens, we can check the details on the results,
+or by clicking `>>`:
 
 ![](docs/hello-2.png)
 
-or explore new Zipkin UI, Zipkin Lense <http://localhost:8080/zipkin>:
+At the top we have a timeline representation of the spans: this represents a parent 
+(`hello-service` handler) and a child spans (`translation-client` call). The empty space
+before and after the child `span` represents the execution latency that has not been recorded
+but that its visible.
 
-![](docs/hello-lense-1.png)
+Then, we have a table with a span per row, including service name, operation name, and latency.
 
-![](docs/hello-lense-2.png)
-
-We have 2 spans: One created by the service operation exposed via HTTP interface, that 
-is the root `span` as is the first one of a trace. And there is a second child `span`
-that is created by the HTTP Client operation attempting to call the Translation Service.
-As this call has failed, the error is recorded as part of the trace and the trace is 
-marked as an error trace (i.e. red trace)
-
-A trace can be tagged with related metadata that can facilitate the discovery of traces:
-
-![](docs/hello-3.png)
-
-In this case, HTTP Method, HTTP Response Status are added to this trace.
+By clicking a span, details include: annotations and tags. In the case of the HTTP handler, 
+we have the HTTP verb, status code, path, etc.
 
 4. If we start the translation service, run in another terminal: 
 
@@ -158,7 +177,7 @@ By using existing libraries instrumentation you will get most of the picture on 
 your service collaborate, but when you need to get details about an specific task part
 of your code, then you can add "custom" `spans`, so your debugging is more specific.
 
-### Scenario 02: Hello World Events
+### Scenario 2: Hello World Events
 
 Instead of a web client, a Client application with implement a batch process 
 to call Hello Service and produce events into a Kafka Topic.

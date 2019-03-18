@@ -21,6 +21,10 @@ start-hello: start ## start all hello services
 hello-server: ## start only hello server
 	docker-compose -f docker-compose.yml -f docker-compose-hello.yml up -d hello-service
 
+.PHONY: test-hello
+test-hello:
+	curl http://localhost:18000/hello/service
+
 .PHONY: hello-translation
 hello-translation: ## starts hello service
 	docker-compose -f docker-compose.yml -f docker-compose-hello.yml up -d hello-translation
