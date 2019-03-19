@@ -1,32 +1,31 @@
-# Talk: Tracing Kafka-based applications with Zipkin
+# Tracing Kafka-based applications with Zipkin
 
-Demo material from talk about tracing Kafka-based applications with Zipkin
-
-Slides: <https://speakerdeck.com/jeqo/the-importance-of-observability-for-kafka-based-applications-with-zipkin>
+> Slides: <https://speakerdeck.com/jeqo/the-importance-of-observability-for-kafka-based-applications-with-zipkin>
 
 ## Labs
 
-1. Hello world distributed tracing: Understand basics about distributed tracing.
-2. Tracing Kafka-based apps: Instrumenting Kafka-based applications with Zipkin.
+1. "Hello, world" distributed tracing: Understanding basics about distributed tracing.
+2. Tracing Kafka-based applications: Instrumenting Kafka-based applications with Zipkin.
 3. `Spigo` demo: How to experiment with Zipkin and models built on top of Tracing data.
 
 ### Pre-requisites
 
 - jdk-8+
-- docker-engine, docker-compose
+- docker tools (docker-engine, docker-compose)
+- Confluent CLI (at least KSQL CLI)
 
 Build applications and starts Docker compose environment: 
 
-```
+```bash
 make
 make start
 ```
 
-## Lab 1: Hello world distributed tracing
+## Lab 1: "Hello, world" distributed tracing
 
-This lab will introduce initial concepts about distributed tracing like Span, Trace and Context Propagation.
+This lab introduce initial concepts about distributed tracing like `span`, `trace` and `context-propagation`.
 
-### Initial Scenario: Hello World Services
+### Scenario 1: "Hello, World" services (synchronous. RPC calls)
 
 There is a service called Hello World that is capable of say hi in different languages, by using a Hello 
 Translation service, and return a response to a user.
@@ -37,103 +36,117 @@ Translation service, and return a response to a user.
 +--------+   +---------------+   +--------------------+
 ```
 
-An HTTP Client will call the `Hello Service` expecting a greeting. The execution of 
-this operation will be traced, and the trace created by this execution is called a
-`span`. The Hello Service then will call then the Translation Service, to translate
-the "Hello" word according to the request.
+A client (http) calls the `Hello` service expecting a greeting response. 
+By tracing service operations, once a request is received and processed, spans are created. 
+`hello` service depends on a `translation` service, to translate responses.
 
-As the `Translation Service` is also instrumented to trace the execution of its operations
-exposed via HTTP, then the execution of translation operation will create another `span`.
+As the `translation` service has tracing enabled to record the execution of its operations, 
+then the execution of translation operation will create more `spans`.
 
-For the translation span to be aware that is part of a bigger trace, it should receive
-some references of the parent trace. This will come as part of the HTTP Request. 
-As the HTTP Client call from `Hello Service` is instrumented with tracing, it will "inject"
-the tracing context on the HTTP Headers.
+A `trace` is an aggregation of multiple spans that share a common `id`.
 
-The `Translation Service`, by receiving the trace context as part of the headers, will create 
-its spans with reference to that context.
+For instance, the `hello` service might trace the operation to receive a request and return a 
+response, and also trace the `translation` service client calls: since it calls it until a response
+is received, as a `child` span. 
+For this 2 `spans` to be related, both need some shared reference (e.g. `trace-id`).
 
-The instrumentation libraries will send the spans created to a tracing system, Zipkin in this case, 
-for it to recreate the complete trace from distributed spans. 
+For translation service spans to be aware that they are part of a broader trace, they should 
+as well receive some reference from a parent trace. 
+As the HTTP Client call from `hello` service is instrumented with tracing, it will "inject"
+the tracing context (e.g., `trace-id` and additional metadata) on the HTTP Headers.
+The `translation` service, by receiving the trace context as part of the headers, will create 
+its spans with reference to that context, with the same trace id.
+
+Tracing libraries are in charge of propagating the context between calls (e.g., when `hello` service
+creates a parent and child `spans`), and propagate context between service calls 
+(e.g, HTTP client/server, Kafka publisher/subscriber).
+
+These libraries record and report `spans` for the tracing infrastructure---Zipkin in this case--- 
+collect and aggregate spans to be stored for further processing.
 
 #### How to run it
 
 1. Start `hello-service` in one terminal:
 
+```bash
+make hello-server
 ```
-make hello-service
+
+The `hello` service by itself is not enough to produce a successful response 
+---it requires the `translation` service. To know that is working successfully: 
+(1) you have to participate in a transaction
+(e.g. make a request), (2) be watching the logs, or (3) produce some evidence from instrumentation. 
+
+By enabling tracing on your services, every execution will collect evidence on the scope of a 
+transaction: since a request is received and how it propagates.
+
+2. Make a call (that will produce an error as `translation` service is down):
+
+```bash
+$ make test-hello
 ```
 
-The service by itself is not enough to produce a successful -it requires the translation
-service. To know that is working successfully: you have to participate in a transaction
-(e.g. make a request), be watching the logs, or produce some evidence from instrumentation. 
+or 
 
-If you instrument your service for tracing correctly you will have evidence of each operation.
-
-2. Make a call (that will produce an error):
-
-```
-$ curl localhost:18000/hello/service
+```bash
+$ curl http://localhost:18000/hello/service
 {"code":500,"message":"There was an error processing your request. It has been logged (ID f0cbd609d1b40741)."}
 ```
 
-3. Go to Zipkin to check the traces <http://localhost:9411/>:
+3. And go to Zipkin to check the traces <http://localhost:9411/>:
+
+> new Zipkin UI released recently, called Zipkin Lens, has been used.
+
+Zipkin UI has 3 main pages: Search, Trace view, and Dependencies. We will explore each of them along 
+these demos.
+
+By searching all traces, one should be found that is the one created by our `curl` call:
 
 ![](docs/hello-1.png)
 
-And check the details:
+As `translation` service is down, trace is mark as `error`. We can also observe that 2 spans are
+part of this trace; that the total execution took 240 ms. and that it has been identified by a 
+generated trace id.
+
+Let's take a look to the trace details. On Zipkin Lens, we can check the details on the results,
+or by clicking `>>`:
 
 ![](docs/hello-2.png)
 
-or explore new Zipkin UI, Zipkin Lense <http://localhost:8080/zipkin>:
+At the top we have a timeline representation of the spans: this represents a parent 
+(`hello-service` handler) and a child spans (`translation-client` call). The empty space
+before and after the child `span` represents the execution latency that has not been recorded
+but that its visible.
 
-![](docs/hello-lense-1.png)
+Then, we have a table with a span per row, including service name, operation name, and latency.
 
-![](docs/hello-lense-2.png)
-
-We have 2 spans: One created by the service operation exposed via HTTP interface, that 
-is the root `span` as is the first one of a trace. And there is a second child `span`
-that is created by the HTTP Client operation attempting to call the Translation Service.
-As this call has failed, the error is recorded as part of the trace and the trace is 
-marked as an error trace (i.e. red trace)
-
-A trace can be tagged with related metadata that can facilitate the discovery of traces:
-
-![](docs/hello-3.png)
-
-In this case, HTTP Method, HTTP Response Status are added to this trace.
+By clicking a span, details include: annotations and tags. In the case of the HTTP handler, 
+we have the HTTP verb, status code, path, etc.
 
 4. If we start the translation service, run in another terminal: 
 
-```
+```bash
 make hello-translation
 ```
 
 5. Now, try to call the `hello-service` via curl: 
 
-```
+```bash
 $ curl localhost:18000/hello/service
 {"hello":"Hello, service","lang":"en"}
 ```
 
-6. Check that a new trace is recorded, and it has 2 services collaborating: 
+A new trace is stored, but in this case it is successful and in the trace details, 
+you will see 3 spans, 1 from `hello` service, 1
+from `translation` service, and 1 combined between client/server call:
 
-![](docs/hello-4.png)
+![](docs/hello-3.png)
 
-And in the trace details, you will see 3 spans, 1 from `hello-service` and 2
-from `translation-service`:
+Client/Server and synchronous communication creates this parent-child trace representations, where empty
+spaces between spans represent processing and network latency that has not been recorded.
 
-![](docs/hello-5.png)
-
-and in Zipkin-Lense:
-
-![](docs/hello-lense-3.png)
-
-The first 2 spans are created by the instrumentation for 
-[HTTP Client](https://github.com/openzipkin/brave/tree/master/instrumentation/httpclient) 
-and [HTTP Server](https://github.com/openzipkin/brave/tree/master/instrumentation/jersey-server):
-
-But the last one is created by using `brave` library (Zipkin instrumentation library for Java) directly on your code:
+Spans can be created by using Tracing libraries. Zipkin has a Java library called `brave`, here is
+an example of how to create a span:
 
 `TranslationResource.java`:
 
@@ -150,19 +163,27 @@ But the last one is created by using `brave` library (Zipkin instrumentation lib
     span.annotate("finished-query");
     span.finish();
     /* END CUSTOM INSTRUMENTATION */
+    
     return Response.ok(hello).build();
   }
 ```
+
+But most spans are created by using *instrumented* libraries: instrumentation is wrapping libraries
+APIs, so you don't have to.
+
+The first 2 spans are created by the instrumentation for 
+[Apache HTTP Client](https://github.com/openzipkin/brave/tree/master/instrumentation/httpclient) 
+and [Jersey HTTP Server](https://github.com/openzipkin/brave/tree/master/instrumentation/jersey-server):
 
 By using existing libraries instrumentation you will get most of the picture on how 
 your service collaborate, but when you need to get details about an specific task part
 of your code, then you can add "custom" `spans`, so your debugging is more specific.
 
-### Scenario 02: Hello World Events
+Even though this is a too simple example, getting to know how a successful and failed executions look like increase confidence and reduce cognitive load.
 
-Instead of a web client, a Client application with implement a batch process 
-to call Hello Service and produce events into a Kafka Topic.
+### Scenario 2: "Hello, World" events (asynchronous, messaging)
 
+To explore how messaging and asynchronous executions are represented, let's test this use-case: 
 
 ```
 +--------+      +---------------+        +------------------+
@@ -176,76 +197,78 @@ to call Hello Service and produce events into a Kafka Topic.
 
 > (*) new components
 
-This scenario represents how to propagate context when you are not communicating 
-services directly by via messaging. In this case, we will use Kafka as an intermediate
-component to publish events.
+A batch hello client has a list of names to call `hello` service and get a response. 
+Responses are propagated as events, using a Kafka topic. A `hello consumer` subscribe and process
+`hello` events.
 
 #### How to run it
 
 1. Start the `hello-client`:
 
-```
+```bash
 make hello-client
 ```
 
 This will run the batch process to call `hello-service` 6 times in sequence.
 
-It will take around 15 secs. to execute.
+![](docs/hello-4.png)
 
-As this component is starting the trace, then `hello-service` and `hello-translation`
-spans will become children of this parent span:
-
-![](docs/hello-6.png)
-
-![](docs/hello-7.png)
-
-The messaging broker is defined as an external library here, as part of the `kafka-clients`
-instrumentation, so we can have it as part of the picture.
-
-> Interesting finding: first send operation by `kafka-client` Producer, is slower than the others.
+`hello-client` receives a response and `send` an event to Kafka. We can see for instance that the
+initial (*cold*) send take longer (~350ms) than the followings (~5ms).
 
 2. Now, let's start the consumer to see how its executions will become part of the trace:
 
-```
+```bash
 make hello-consumer
 ```
 
-![](docs/hello-8.png)
+And let's run client batch again:
 
-![](docs/hello-lense-4.png)
+```bash
+make hello-client
+```
+
+This time, let's focus on the initial spans by selecting this period on the timeline.
+We can see for instance that `hello-consumer` is polling and processing the event, taking a few
+nano seconds, and metadata as Kafka topic name and broker are collected.
+
+![](docs/hello-5.png)
 
 > Benefit: Now we have evidence about how much time is taking for data to get downstream. 
 For instance, is the goal of adopting Kafka is to reduce latency on your data pipelines, here 
 is the evidence of how much latency you are saving, or not.
 
 In the case of Kafka Producers and Consumers, the instrumentation provided by Brave is 
-injecting the trace context on the Kafka Headers, so the consumers spans can reference to 
+injecting the trace context on the Kafka headers, so the consumers spans can reference to 
 the parent span.
 
-## Lab 02: Twitter Kafka-based application
+## Lab 02: Tracing Kafka-based application
 
 Kafka platform provides different APIs to implement streaming applications. We have seen 
-in the Lab 01 that Brave offers instrumentation for Kafka Client library. In this Lab, we 
-will evaluate how to instrument the other APIs: Streams API and Connect API.
+in the Lab 01 that `Brave` offers instrumentation for Kafka Client library. In this Lab, we 
+will evaluate how to instrument the other APIs: Streams API, Connect API and additional components
+like KSQL.
 
-To do this, we will introduce a use-case: 
+To do this, let's introduce a new use-case: 
 
-> We have applications developed around Tweets. First of all, we need to pull tweets
-from Twitter. Once we have Tweets available in our system, we need to parse them into 
-our preferred format, to then be consumed by many applications. 
+> We have applications developed around Twitter posts. First, we need to pull tweets
+from Twitter. Once we have tweets available in Kafka, we need to process them, to then 
+be consumed by many applications. 
 
-For this use-case we will use a [Twitter Source Connector](https://github.com/jcustenborder/kafka-connect-twitter)
-to pull tweets into Kafka. We will implement a Kafka Streams application to transform from JSON to Avro format.
-On the other side of Kafka, a [JDBC Source Connector](https://github.com/confluentinc/kafka-connect-jdbc)
-will send records to PostgreSQL, and another consumer will print records to console.
+Let's use [Kafka Twitter Connector](https://github.com/jcustenborder/kafka-connect-twitter)
+to pull tweets into Kafka. 
+Then, a Kafka Streams application transforms tweets from JSON into Avro format.
 
-**Data-flow view**:
+On the consumer side, a [Kafka JDBC Connector](https://github.com/confluentinc/kafka-connect-jdbc)
+will consumer and send records to PostgreSQL, along with other applications.
+
+**Data pipeline view**:
 
 ```
-+---------+   +-------------------+          +------------------+    +--------------+
-| Twitter |-->| Twitter Connector |-(Kafka)->| Stream Transform |-+->| DB Connector |
-+---------+   +-------------------+          +------------------+ |  +--------------+
-                                                               (kafka)
++---------+   +-------------------+          +------------------+    +----------------+
+| Twitter |-->| Twitter Connector |-(kafka)->| Stream Transform |-+->| JDBC Connector |
++---------+   +-------------------+          +------------------+ |  +----------------+
+                                                               (kafka) //other consumers
                                                                   |  +--------------+
                                                                   +->| Consumer App |
                                                                      +--------------+
@@ -254,33 +277,33 @@ will send records to PostgreSQL, and another consumer will print records to cons
                                                                      +------+
 ```
 
-**Choreography view**:
+**Event collaboration**:
 
 ```
                   Kafka
                +----------+
 +---------+    |          |    +------------------+
-| Twitter |--->|          |--->|                  |
+| Twitter |-1->|(raw-json)|-2->|                  |
 +---------+    |          |    | Stream Transform |
-               |          |<---|                  |
+               |( parsed )|<-3-|                  |
                |          |    +------------------+
                |          |
-               |          |    +--------------+    +------------+
-               |          |--->| DB Connector |--->| Postgresql |
-               |          |    +--------------+    +------------+
+               |          |       +--------------+    +------------+
+               |( parsed )|--4.1->| DB Connector |--->| Postgresql |
+               |          |       +--------------+    +------------+
                |          |
-               |          |    +--------------+    +---------+
-               |          |--->| Consumer App |--->| Console |
-               |          |    +--------------+    +---------+
+               |          |       +--------------+    +---------+
+               |( parsed )|--4.2->| Consumer App |--->| Console |
+               |          |       +--------------+    +---------+
                |          |
-               |          |    +------+
-               |          |--->| KSQL |
-               |          |    +------+
+               |          |       +------+
+               |( parsed )|--4.3->| KSQL |
+               |          |       +------+
                |          |
                +----------+
 ```
 
-### Instrumentation
+### Tracing Kafka Clients and Kafka Streams
 
 For Kafka Clients and Kafka Streams, as you implement the code, there are existing 
 libraries to instrument them:
@@ -288,115 +311,219 @@ libraries to instrument them:
 - Kafka Clients (Producer/Consumer): <https://github.com/openzipkin/brave/tree/master/instrumentation/kafka-clients>
 - Kafka Streams: <https://github.com/openzipkin/brave/tree/master/instrumentation/kafka-streams>
 
-For the case of Kafka Connectors, implementation is already done, but Kafka offers 
-an interface to inject some code before it produce records to Kafka, and before a 
-record is consumed by consumers, called [Kafka Interceptors](https://cwiki.apache.org/confluence/display/KAFKA/KIP-42%3A+Add+Producer+and+Consumer+Interceptors).
+### Tracing packaged Kafka applications
 
-At [Sysco](https://github.com/sysco-middleware) we have developed an initial version of interceptors
-for Zipkin that reuse some of the logic of Kafka Instrumentation.
+For the case of Kafka Connectors and other packaged applications 
+(e.g. [KSQL](https://www.confluent.io/product/ksql/), 
+[REST Proxy](https://docs.confluent.io/current/kafka-rest/docs/index.html)) 
+are already packaged. However, Kafka clients 
+include an API to inject code before messages are sent to Kafka, and before a 
+message is consumed by consumers, called [Kafka Interceptors](https://cwiki.apache.org/confluence/display/KAFKA/KIP-42%3A+Add+Producer+and+Consumer+Interceptors).
 
-- Kafka Interceptors for Kafka Connect, REST Proxy, etc (alpha version): <https://github.com/sysco-middleware/kafka-interceptors/tree/master/zipkin> 
+This interceptors create a space to introduce tracing code to mark when messages are sent and 
+consumed.
 
-These interceptors have to be added to the classpath where connectors are running, and the pass them via configuration:
+At [Sysco AS](https://github.com/sysco-middleware) we have developed interceptors
+for Zipkin: <https://github.com/sysco-middleware/kafka-interceptor-zipkin> 
 
+These interceptors have to be added to applications classpath, where can be referenced via properties:
+
+Producer:
+```java
+    producerConfig.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, Collections.singletonList(TracingProducerInterceptor.class));
+```
+
+Consumer:
+```java
+    consumerConfig.put(ConsumerConfig.INTERCEPTOR_CLASSES_CONFIG, Collections.singletonList(TracingConsumerInterceptor.class));
+```
+
+And Confluent Docker images:
+
+Connectors:
 ```yaml
       CONNECT_PRODUCER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor'
       CONNECT_CONSUMER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor'
 ```
 
-### How to run it
-
-1. Configure a Twitter applications [here](https://apps.twitter.com) and set secrets here: `twitter-tweets-source-connector/twitter-source.json`
-
-2. Deploy the Twitter Source Connector:
-
+KSQL:
+```yaml
+      KSQL_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
+      KSQL_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
 ```
+
+### Tracing Kafka Source Connector
+
+In order to test this demo, you need to configure a Twitter application first, following instructions
+here: <https://apps.twitter.com>
+
+1. Start demo components:
+
+```bash
 make start-twitter
-# wait for connectors
+```
+
+This command starts Kafka Connectors, KSQL and a kafka-consumer.
+
+2. Add your secrets and Twitter connector configuration here: 
+`twitter-tweets-source-connector/twitter-source.json`
+
+Similar to this:
+
+```json
+{
+  "name": "twitter_source_json_v01",
+  "config": {
+    "connector.class": "com.github.jcustenborder.kafka.connect.twitter.TwitterSourceConnector",
+    "twitter.oauth.consumerKey": "1Ig*******************",
+    "twitter.oauth.consumerSecret": "ZplIMKiQm4pOhD7t7X6**************************",
+    "twitter.oauth.accessToken": "135***********-*****************88",
+    "twitter.oauth.accessTokenSecret": "uh4qHNm8**************************",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": false,
+    "key.converter.schemas.enable": false,
+    "kafka.delete.topic": "twitter_deletes_json_01",
+    "kafka.status.topic": "twitter_json_v1",
+    "process.deletes": true,
+    "filter.keywords": "java,big,data,kafka"
+  }
+}
+```
+
+and deploy the Twitter Source Connector:
+
+```bash
 make twitter-source
 ```
 
-This will start pulling tweets, based on the configuration from `twitter-tweets-source-connector/twitter-source.json`.
-You can go to Zipkin, as connector is instrumented, to validate that is running:
+This will start receiving tweets, based on keywords added as part of the configuration.
 
-![](docs/twitter-1.png)
+Kafka Connector (``) has been configured to use Zipkin interceptors:
 
-Each span will represent each tweet that has been received by connector and sent to Kafka.
+```yaml
+  kafka-connect-twitter:
+    #...
+    environment:
+      #...
+      CONNECT_PRODUCER_ZIPKIN_SENDER_TYPE: "KAFKA"
+      CONNECT_PRODUCER_ZIPKIN_LOCAL_SERVICE_NAME: "kafka-connect-twitter"
+      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
+```
 
-It is just including the `on_send` method execution, that is not significant, but
-it brings Kafka Connectors into the distributed trace picture.
+So, we can go to Zipkin and check how traces are created:
 
-2. Stream processor applications is instrumented to capture latency created by every task part of the stream-process:
+![](docs/twitter-1.gif)
+
+Each trace will represent each tweet that has been received by connector and sent to Kafka.
+
+Even though span recorded by interceptor are not as rich as the ones created by `brave` instrumentation,
+they put off-the-shelf components as Connectors and KSQL into the picture, and mark the point where
+message are sent/consumed, enabling a more accurate latency analysis. 
+
+Similarly, Kafka JDBC Connector has tracing enabled via interceptors:
+
+```yaml
+  kafka-connect-jdbc:
+    # ..
+    environment:
+      # ...
+      CONNECT_CONSUMER_ZIPKIN_SENDER_TYPE: "KAFKA"
+      CONNECT_CONSUMER_ZIPKIN_LOCAL_SERVICE_NAME: "kafka-connect-jdbc"
+      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
+```
+
+To deploy:
+
+```bash
+make twitter-jdbc
+```
+
+### Tracing Kafka Streams applications
+
+[Kafka Streams instrumentation](https://github.com/openzipkin/brave/tree/master/instrumentation/kafka-streams)
+allow tracing of input (messages consumed), processors, and output (messages produced).
+Processors that are created by Kafka Streams tracing utility are traced.
+
+In this example:
 
 ```java
-
 		final StreamsBuilder builder = new StreamsBuilder();
 		builder.stream(config.getString("topics.input-tweets-json"), Consumed.with(Serdes.String(), Serdes.String()))
-				.transform(kafkaStreamsTracing.map("parse_json",
-						(String key, String value) -> {
-							try {
-								return KeyValue.pair(key, objectMapper.readTree(value));
-							}
-							catch (Exception e) {
-								e.printStackTrace();
-								return KeyValue.pair(key, null);
-							}
-						}))
-				.filterNot((k, v) -> Objects.isNull(v))
-				.transformValues(kafkaStreamsTracing.mapValues("json_to_avro",
-						TwitterStreamProcessor::parseTweet))
+				.transform(kafkaStreamsTracing.map("parse_json", this::parseJson))
+				.filterNot((k, tweet) -> tweet.hashtags().isEmpty())
+				.transformValues(kafkaStreamsTracing.mapValues("json_to_avro", this::parseTweet))
 				.to(config.getString("topics.output-tweets-avro"));
 ```
 
-As you deploy Kafka-based applications, as they are instrumented, they will be added to the traces:
+`builder.stream` is creating the first span, then `kafkaStreamsTracing.map()` is creating the next one,
+and so on, until `builder.to` creates the last span, that represents a message been produced into another
+topic.
 
-![](docs/twitter-2.png)
+This is how it looks like:
 
-![Zipkin Lense](docs/twitter-lense-1.png)
+Run:
 
-Here the stream processor is part of the picture.
-
-3. Let's now deploy the JDBC Sink Connector and the Console application:
-
-```
-make start-twitter
+```bash
+make twitter-stream
 ```
 
-![](docs/twitter-3.png)
+![](docs/twitter-1.png)
 
-Now we have all distributed components collaboration, part of a Kafka data pipeline, 
-evidenced as part of a trace:
+We can appreciate clearly that there is no parent case as messaging means producers and consumers
+don't interact directly but via a broker.
 
-![](docs/twitter-4.png)
+The empty space between a message producer and consumed represents the network latency plus the broker
+latency. If broker, like Kafka, would be instrumented to report tracing data, we could see how much
+from this overall latency is actually part of Kafka.
 
-> Benefit: we can see which is the part of the data pipelines that I can start tuning/refactoring.
+Another interesting fact about this trace is that it shows how acknowledge works: in this trace
+the `send` span represents the latency from sending a record until it receives an ack from the 
+server. But in the meantime, consumer might be already consuming those records.
 
-4. Finally, let's create a KSQL Stream to see how we can observe messages from Twitter to KSQL with Zipkin.
+The overall latency on this pipeline trace is ~4ms. 
+
+### Tracing KSQL
+
+Similar to Kafka Connectors, KSQL can also make use of tracing interceptors to record activity
+inside a KSQL server.
+
+Let's add interceptors to KSQL docker compose service:
+
+```yaml
+  ksql:
+    # ...
+    environment:
+      # ...
+      KSQL_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
+      KSQL_ZIPKIN_SENDER_TYPE: "KAFKA"
+      KSQL_ZIPKIN_LOCAL_SERVICE_NAME: "ksql"
+      KSQL_ZIPKIN_BOOTSTRAP_SERVERS: kafka:9092
+      KSQL_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
+```
+
+Then create a KSQL Stream to see how we can observe messages from Twitter to KSQL with Zipkin.
 
 ```bash
 ksql http://localhost:8088
 
-ksql> create stream twitter_avro_v1 (text varchar, username varchar, lang varchar) with (kafka_topic='twitter_avro_v1', value_format='AVRO');
+ksql> CREATE STREAM tweets_avro WITH (KAFKA_TOPIC='twitter_avro_v1', VALUE_FORMAT='AVRO');
 
-ksql> select username from twitter_avro_v1;
+ksql> SELECT username FROM tweets_avro;
 ```
+Now we have all distributed components collaboration, part of a Kafka data pipeline, 
+evidenced as part of a trace:
 
-Go to Zipkin Lense and check traces been collected from KSQL via interceptors:
+![](docs/twitter-2.png)
 
-![](docs/twitter-lense-4.png)
+### Service Dependencies
 
 After recording traces from distributed components, you are storing actual
 behaviour from your systems. Now you have the opportunity of creating models on
 top of tracing data. One example is the service dependency model that comes out
 of the box from Zipkin:
 
-![](docs/twitter-5.png)
-
-And Zipkin Lense includes an **awesome** Vizceral view from service dependencies:
-
-![](docs/twitter-lense-2.png)
-
-![](docs/twitter-lense-3.png)
+![](docs/dependencies.gif)
 
 ## Lab 3: Spigo Simulation
 

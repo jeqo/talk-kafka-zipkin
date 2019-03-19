@@ -2,20 +2,14 @@
 version: '3'
 services:
   zipkin:
-    image: jeqo/zipkin-kafka:0.2.1
+    image: openzipkin/zipkin:2.12.6
     environment:
-      STORAGE_TYPE: kafkastore
+      STORAGE_TYPE: mem
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
       - 9411:9411
     depends_on:
       - kafka
-  zipkin-ui:
-    image: openzipkin/zipkin-ui:2.12.3
-    environment:
-      ZIPKIN_BASE_URL: http://zipkin:9411
-    ports:
-      - 8080:80
   zookeeper:
     image: confluentinc/cp-zookeeper:5.1.2
     ports:

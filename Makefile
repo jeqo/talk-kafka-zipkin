@@ -21,6 +21,10 @@ start-hello: start ## start all hello services
 hello-server: ## start only hello server
 	docker-compose -f docker-compose.yml -f docker-compose-hello.yml up -d hello-service
 
+.PHONY: test-hello
+test-hello:
+	curl http://localhost:18000/hello/service
+
 .PHONY: hello-translation
 hello-translation: ## starts hello service
 	docker-compose -f docker-compose.yml -f docker-compose-hello.yml up -d hello-translation
@@ -45,6 +49,9 @@ clone-submodule: ## clone submodules
 destroy: ## cleanup environment
 	docker-compose down --remove-orphans
 
+.PHONY: twitter-stream
+twitter-stream: ## starts twitter source connector
+	docker-compose -f docker-compose.yml -f docker-compose-twitter.yml restart twitter-stream-processor
 
 .PHONY: twitter-source
 twitter-source: ## starts twitter source connector
