@@ -12,6 +12,7 @@
 
 - jdk-8+
 - docker tools (docker-engine, docker-compose)
+- Confluent CLI (at least KSQL CLI)
 
 Build applications and starts Docker compose environment: 
 
@@ -351,99 +352,178 @@ KSQL:
       KSQL_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
 ```
 
-### How to run it
+### Tracing Kafka Source Connector
 
-1. Configure a Twitter applications [here](https://apps.twitter.com) and set secrets here: `twitter-tweets-source-connector/twitter-source.json`
+In order to test this demo, you need to configure a Twitter application first, following instructions
+here: <https://apps.twitter.com>
 
-2. Deploy the Twitter Source Connector:
+1. Start demo components:
 
-```
+```bash
 make start-twitter
-# wait for connectors
+```
+
+This command starts Kafka Connectors, KSQL and a kafka-consumer.
+
+2. Add your secrets and Twitter connector configuration here: 
+`twitter-tweets-source-connector/twitter-source.json`
+
+Similar to this:
+
+```json
+{
+  "name": "twitter_source_json_v01",
+  "config": {
+    "connector.class": "com.github.jcustenborder.kafka.connect.twitter.TwitterSourceConnector",
+    "twitter.oauth.consumerKey": "1Ig*******************",
+    "twitter.oauth.consumerSecret": "ZplIMKiQm4pOhD7t7X6**************************",
+    "twitter.oauth.accessToken": "135***********-*****************88",
+    "twitter.oauth.accessTokenSecret": "uh4qHNm8**************************",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": false,
+    "key.converter.schemas.enable": false,
+    "kafka.delete.topic": "twitter_deletes_json_01",
+    "kafka.status.topic": "twitter_json_v1",
+    "process.deletes": true,
+    "filter.keywords": "java,big,data,kafka"
+  }
+}
+```
+
+and deploy the Twitter Source Connector:
+
+```bash
 make twitter-source
 ```
 
-This will start pulling tweets, based on the configuration from `twitter-tweets-source-connector/twitter-source.json`.
-You can go to Zipkin, as connector is instrumented, to validate that is running:
+This will start receiving tweets, based on keywords added as part of the configuration.
 
-![](docs/twitter-1.png)
+Kafka Connector (``) has been configured to use Zipkin interceptors:
 
-Each span will represent each tweet that has been received by connector and sent to Kafka.
+```yaml
+  kafka-connect-twitter:
+    #...
+    environment:
+      #...
+      CONNECT_PRODUCER_ZIPKIN_SENDER_TYPE: "KAFKA"
+      CONNECT_PRODUCER_ZIPKIN_LOCAL_SERVICE_NAME: "kafka-connect-twitter"
+      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
+```
 
-It is just including the `on_send` method execution, that is not significant, but
-it brings Kafka Connectors into the distributed trace picture.
+So, we can go to Zipkin and check how traces are created:
 
-2. Stream processor applications is instrumented to capture latency created by every task part of the stream-process:
+![](docs/twitter-1.gif)
+
+Each trace will represent each tweet that has been received by connector and sent to Kafka.
+
+Even though span recorded by interceptor are not as rich as the ones created by `brave` instrumentation,
+they put off-the-shelf components as Connectors and KSQL into the picture, and mark the point where
+message are sent/consumed, enabling a more accurate latency analysis. 
+
+Similarly, Kafka JDBC Connector has tracing enabled via interceptors:
+
+```yaml
+  kafka-connect-jdbc:
+    # ..
+    environment:
+      # ...
+      CONNECT_CONSUMER_ZIPKIN_SENDER_TYPE: "KAFKA"
+      CONNECT_CONSUMER_ZIPKIN_LOCAL_SERVICE_NAME: "kafka-connect-jdbc"
+      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
+```
+
+To deploy:
+
+```bash
+make twitter-jdbc
+```
+
+### Tracing Kafka Streams applications
+
+[Kafka Streams instrumentation](https://github.com/openzipkin/brave/tree/master/instrumentation/kafka-streams)
+allow tracing of input (messages consumed), processors, and output (messages produced).
+Processors that are created by Kafka Streams tracing utility are traced.
+
+In this example:
 
 ```java
-
 		final StreamsBuilder builder = new StreamsBuilder();
 		builder.stream(config.getString("topics.input-tweets-json"), Consumed.with(Serdes.String(), Serdes.String()))
-				.transform(kafkaStreamsTracing.map("parse_json",
-						(String key, String value) -> {
-							try {
-								return KeyValue.pair(key, objectMapper.readTree(value));
-							}
-							catch (Exception e) {
-								e.printStackTrace();
-								return KeyValue.pair(key, null);
-							}
-						}))
-				.filterNot((k, v) -> Objects.isNull(v))
-				.transformValues(kafkaStreamsTracing.mapValues("json_to_avro",
-						TwitterStreamProcessor::parseTweet))
+				.transform(kafkaStreamsTracing.map("parse_json", this::parseJson))
+				.filterNot((k, tweet) -> tweet.hashtags().isEmpty())
+				.transformValues(kafkaStreamsTracing.mapValues("json_to_avro", this::parseTweet))
 				.to(config.getString("topics.output-tweets-avro"));
 ```
 
-As you deploy Kafka-based applications, as they are instrumented, they will be added to the traces:
+`builder.stream` is creating the first span, then `kafkaStreamsTracing.map()` is creating the next one,
+and so on, until `builder.to` creates the last span, that represents a message been produced into another
+topic.
 
-![](docs/twitter-2.png)
+This is how it looks like:
 
-![Zipkin Lense](docs/twitter-lense-1.png)
+Run:
 
-Here the stream processor is part of the picture.
-
-3. Let's now deploy the JDBC Sink Connector and the Console application:
-
-```
-make start-twitter
+```bash
+make twitter-stream
 ```
 
-![](docs/twitter-3.png)
+![](docs/twitter-1.png)
 
-Now we have all distributed components collaboration, part of a Kafka data pipeline, 
-evidenced as part of a trace:
+We can appreciate clearly that there is no parent case as messaging means producers and consumers
+don't interact directly but via a broker.
 
-![](docs/twitter-4.png)
+The empty space between a message producer and consumed represents the network latency plus the broker
+latency. If broker, like Kafka, would be instrumented to report tracing data, we could see how much
+from this overall latency is actually part of Kafka.
 
-> Benefit: we can see which is the part of the data pipelines that I can start tuning/refactoring.
+Another interesting fact about this trace is that it shows how acknowledge works: in this trace
+the `send` span represents the latency from sending a record until it receives an ack from the 
+server. But in the meantime, consumer might be already consuming those records.
 
-4. Finally, let's create a KSQL Stream to see how we can observe messages from Twitter to KSQL with Zipkin.
+The overall latency on this pipeline trace is ~4ms. 
+
+### Tracing KSQL
+
+Similar to Kafka Connectors, KSQL can also make use of tracing interceptors to record activity
+inside a KSQL server.
+
+Let's add interceptors to KSQL docker compose service:
+
+```yaml
+  ksql:
+    # ...
+    environment:
+      # ...
+      KSQL_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
+      KSQL_ZIPKIN_SENDER_TYPE: "KAFKA"
+      KSQL_ZIPKIN_LOCAL_SERVICE_NAME: "ksql"
+      KSQL_ZIPKIN_BOOTSTRAP_SERVERS: kafka:9092
+      KSQL_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
+```
+
+Then create a KSQL Stream to see how we can observe messages from Twitter to KSQL with Zipkin.
 
 ```bash
 ksql http://localhost:8088
 
-ksql> create stream twitter_avro_v1 (text varchar, username varchar, lang varchar) with (kafka_topic='twitter_avro_v1', value_format='AVRO');
+ksql> CREATE STREAM tweets_avro WITH (KAFKA_TOPIC='twitter_avro_v1', VALUE_FORMAT='AVRO');
 
-ksql> select username from twitter_avro_v1;
+ksql> SELECT username FROM tweets_avro;
 ```
+Now we have all distributed components collaboration, part of a Kafka data pipeline, 
+evidenced as part of a trace:
 
-Go to Zipkin Lense and check traces been collected from KSQL via interceptors:
+![](docs/twitter-2.png)
 
-![](docs/twitter-lense-4.png)
+### Service Dependencies
 
 After recording traces from distributed components, you are storing actual
 behaviour from your systems. Now you have the opportunity of creating models on
 top of tracing data. One example is the service dependency model that comes out
 of the box from Zipkin:
 
-![](docs/twitter-5.png)
-
-And Zipkin Lense includes an **awesome** Vizceral view from service dependencies:
-
-![](docs/twitter-lense-2.png)
-
-![](docs/twitter-lense-3.png)
+![](docs/dependencies.gif)
 
 ## Lab 3: Spigo Simulation
 

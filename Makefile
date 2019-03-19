@@ -49,6 +49,9 @@ clone-submodule: ## clone submodules
 destroy: ## cleanup environment
 	docker-compose down --remove-orphans
 
+.PHONY: twitter-stream
+twitter-stream: ## starts twitter source connector
+	docker-compose -f docker-compose.yml -f docker-compose-twitter.yml restart twitter-stream-processor
 
 .PHONY: twitter-source
 twitter-source: ## starts twitter source connector

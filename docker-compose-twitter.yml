@@ -6,17 +6,12 @@ services:
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
-    depends_on:
-      - kafka
-      - schema-registry
+
   twitter-console-consumer:
     image: twitter-console-consumer
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
-    depends_on:
-      - kafka
-      - schema-registry
 
   twitter-connect:
     image: syscomiddleware/cp-kafka-connect:5.0.0-0.1
@@ -44,13 +39,12 @@ services:
       CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       CONNECT_ZOOKEEPER_CONNECT: zookeeper:2181
       CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
-      CONNECT_PRODUCER_ZIPKIN_SENDER_TYPE: "KAFKA"
+      CONNECT_PRODUCER_ZIPKIN_SENDER_TYPE: "HTTP"
+      CONNECT_PRODUCER_ZIPKIN_HTTP_ENDPOINT: "http://zipkin:9411/api/v2/spans"
       CONNECT_PRODUCER_ZIPKIN_LOCAL_SERVICE_NAME: "kafka-connect-twitter"
       CONNECT_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
     volumes:
       - ./lib/kafka-interceptor-zipkin.jar:/etc/kafka-connect/jars/kafka-interceptor-zipkin.jar
-    depends_on:
-      - schema-registry
 
   jdbc-connect:
     image: confluentinc/cp-kafka-connect:5.1.2
@@ -75,13 +69,12 @@ services:
       CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       CONNECT_ZOOKEEPER_CONNECT: zookeeper:2181
       CONNECT_PLUGIN_PATH: /usr/share/java,/etc/kafka-connect/jars
-      CONNECT_CONSUMER_ZIPKIN_SENDER_TYPE: "KAFKA"
+      CONNECT_CONSUMER_ZIPKIN_SENDER_TYPE: "HTTP"
+      CONNECT_CONSUMER_ZIPKIN_HTTP_ENDPOINT: "http://zipkin:9411/api/v2/spans"
       CONNECT_CONSUMER_ZIPKIN_LOCAL_SERVICE_NAME: "kafka-connect-jdbc"
       CONNECT_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
     volumes:
       - ./lib/kafka-interceptor-zipkin.jar:/etc/kafka-connect/jars/kafka-interceptor-zipkin.jar
-    depends_on:
-      - schema-registry
 
   postgres:
     image: postgres
@@ -96,9 +89,6 @@ services:
     image: confluentinc/cp-ksql-server:5.1.2
     ports:
     - 8088:8088
-    depends_on:
-    - kafka
-    - schema-registry
     environment:
       KSQL_CUB_KAFKA_TIMEOUT: 300
       KSQL_BOOTSTRAP_SERVERS: kafka:9092
@@ -106,9 +96,9 @@ services:
       KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       KSQL_KSQL_SERVICE_ID: tweets-ksql
       KSQL_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
-      KSQL_ZIPKIN_SENDER_TYPE: "KAFKA"
+      KSQL_ZIPKIN_SENDER_TYPE: "HTTP"
+      KSQL_ZIPKIN_HTTP_ENDPOINT: "http://zipkin:9411/api/v2/spans"
       KSQL_ZIPKIN_LOCAL_SERVICE_NAME: "ksql"
-      KSQL_ZIPKIN_BOOTSTRAP_SERVERS: kafka:9092
       KSQL_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
     volumes:
     - ./lib/kafka-interceptor-zipkin.jar:/usr/share/java/ksql-server/kafka-interceptor-zipkin.jar
