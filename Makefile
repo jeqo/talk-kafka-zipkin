@@ -58,12 +58,12 @@ twitter-stream: ## starts twitter source connector
 .PHONY: twitter-source
 twitter-source: ## starts twitter source connector
 	cd twitter-tweets-source-connector/; \
-	sh deploy.sh
+	curl -XPUT -H 'Content-Type:application/json' -d @twitter-source.json http://localhost:8083/connectors/connector-twitter-source/config
 
 .PHONY: twitter-jdbc
 twitter-jdbc: ## deploys kafka jdbc sink connector to postgres
 	cd twitter-jdbc-sink-connector/; \
-	sh deploy.sh
+	curl -XPUT -H 'Content-Type:application/json' -d @jdbc-sink.json http://localhost:8084/connectors/connector-jdbc-sink/config
 
 .PHONY: twitter-console
 twitter-console: ## starts kafka console consumer

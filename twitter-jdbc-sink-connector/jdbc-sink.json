@@ -1,14 +1,10 @@
 {
-  "name": "connector-jdbc-sink",
-  "config": {
-    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
-    "tasks.max": "1",
-    "topics": "twitter-avro",
-    "connection.url": "jdbc:postgresql://postgres/postgres",
-    "connection.user": "postgres",
-    "connection.password": "example",
-    "auto.create": "true",
-    "name": "connector-jdbc-sink",
-    "errors.log.enable": true
-  }
+  "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+  "tasks.max": "1",
+  "topics": "twitter-avro",
+  "connection.url": "jdbc:postgresql://postgres/postgres",
+  "connection.user": "postgres",
+  "connection.password": "example",
+  "auto.create": "true",
+  "errors.log.enable": true
 }

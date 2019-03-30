@@ -507,9 +507,9 @@ Then create a KSQL Stream to see how we can observe messages from Twitter to KSQ
 ```bash
 ksql http://localhost:8088
 
-ksql> CREATE STREAM tweets_avro WITH (KAFKA_TOPIC='twitter_avro_v1', VALUE_FORMAT='AVRO');
+ksql> CREATE STREAM tweets_avro WITH (KAFKA_TOPIC='twitter-avro', VALUE_FORMAT='AVRO');
 
-ksql> SELECT username FROM tweets_avro;
+ksql> SELECT * FROM tweets_avro;
 ```
 Now we have all distributed components collaboration, part of a Kafka data pipeline, 
 evidenced as part of a trace:

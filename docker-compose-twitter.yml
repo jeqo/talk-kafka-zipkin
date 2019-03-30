@@ -6,12 +6,14 @@ services:
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
 
   twitter-console-consumer:
     image: twitter-console-consumer
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
 
   twitter-connect:
     image: syscomiddleware/cp-kafka-connect:5.0.0-0.1
