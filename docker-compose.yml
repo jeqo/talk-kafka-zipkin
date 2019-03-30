@@ -2,10 +2,16 @@
 version: '3'
 services:
   zipkin:
-    image: openzipkin/zipkin:2.12.6
+    # Experimental Zipkin with Kafka storage
+    image: jeqo/zipkin-kafka:0.4.0
+    # Official Zipkin Image
+    # image: openzipkin/zipkin:2.12.6
     environment:
-      STORAGE_TYPE: mem
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_STORE_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_STORE_DIRECTORY: /zipkin/data
+      KAFKA_STORE_COMPRESSION_TYPE: SNAPPY
+    volumes:
+      - zipkin:/zipkin/data
     ports:
       - 9411:9411
     depends_on:
@@ -41,3 +47,5 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
     depends_on:
       - kafka
+volumes:
+  zipkin:

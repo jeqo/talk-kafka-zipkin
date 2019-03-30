@@ -28,15 +28,21 @@ public class TranslationResource {
 	@Path("{lang}")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response translateHello(@PathParam("lang") final String lang) {
-		/* START CUSTOM INSTRUMENTATION */
 		final ScopedSpan span = tracer.startScopedSpan("query-repository");
-		span.annotate("started-query");
-		span.tag("lang", Optional.ofNullable(lang).orElse(""));
-		final String hello = repository.find(lang);
-		span.annotate("finished-query");
-		span.finish();
-		/* END CUSTOM INSTRUMENTATION */
-		return Response.ok(hello).build();
+		try {
+			span.annotate("query-started");
+			span.tag("lang", Optional.ofNullable(lang).orElse(""));
+			final String hello = repository.find(lang);
+			span.annotate("query-finished");
+			return Response.ok(hello).build();
+		}
+		catch (RuntimeException | Error e) {
+			span.error(e);
+			throw e;
+		}
+		finally {
+			span.finish();
+		}
 	}
 
 }

@@ -1,5 +1,5 @@
 {
-  "name": "twitter_source_json_v01",
+  "name": "connector-twitter-source",
   "config": {
     "connector.class": "com.github.jcustenborder.kafka.connect.twitter.TwitterSourceConnector",
     "twitter.oauth.consumerKey": "1Ig*******************",
@@ -10,8 +10,8 @@
     "key.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": false,
     "key.converter.schemas.enable": false,
-    "kafka.delete.topic": "twitter_deletes_json_01",
-    "kafka.status.topic": "twitter_json_v1",
+    "kafka.delete.topic": "twitter-deletes-json",
+    "kafka.status.topic": "twitter-json",
     "process.deletes": true,
     "filter.keywords": "java,big,data,kafka"
   }

@@ -15,7 +15,7 @@ public class HelloServiceConfiguration extends Configuration {
 
 	@Valid
 	@NotNull
-	private String kafkaBootstrapServers;
+	private String zipkinEndpoint;
 
 	@Valid
 	@NotNull
@@ -42,12 +42,12 @@ public class HelloServiceConfiguration extends Configuration {
 		this.translationServiceUrl = translationServiceUrl;
 	}
 
-	public String getKafkaBootstrapServers() {
-		return kafkaBootstrapServers;
+	public String getZipkinEndpoint() {
+		return zipkinEndpoint;
 	}
 
-	public void setKafkaBootstrapServers(String kafkaBootstrapServers) {
-		this.kafkaBootstrapServers = kafkaBootstrapServers;
+	public void setZipkinEndpoint(String zipkinEndpoint) {
+		this.zipkinEndpoint = zipkinEndpoint;
 	}
 
 }

@@ -3,14 +3,13 @@ package io.github.jeqo.talk;
 import brave.Tracing;
 import brave.kafka.clients.KafkaTracing;
 import brave.sampler.Sampler;
-import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroDeserializer;
 import io.github.jeqo.talk.avro.Tweet;
-import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import zipkin2.Span;
 import zipkin2.reporter.AsyncReporter;
 import zipkin2.reporter.kafka11.KafkaSender;
 
@@ -24,22 +23,22 @@ public class TwitterConsoleConsumer {
 
 	public static void main(String[] args) {
 
-		final Config config = ConfigFactory.load();
-		final String kafkaBootstrapServers = config.getString("kafka.bootstrap-servers");
-		final String schemaRegistryUrl = config.getString("schema-registry.url");
+		final var config = ConfigFactory.load();
+		final var kafkaBootstrapServers = config.getString("kafka.bootstrap-servers");
+		final var schemaRegistryUrl = config.getString("schema-registry.url");
 
 		/* START TRACING INSTRUMENTATION */
-		final KafkaSender sender = KafkaSender.newBuilder()
+		final var sender = KafkaSender.newBuilder()
 				.bootstrapServers(kafkaBootstrapServers).build();
-		final AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build();
-		final Tracing tracing = Tracing.newBuilder()
+		final var reporter = AsyncReporter.builder(sender).build();
+		final var tracing = Tracing.newBuilder()
 				.localServiceName("twitter-console-consumer")
 				.sampler(Sampler.ALWAYS_SAMPLE).spanReporter(reporter).build();
-		final KafkaTracing kafkaTracing = KafkaTracing.newBuilder(tracing)
+		final var kafkaTracing = KafkaTracing.newBuilder(tracing)
 				.remoteServiceName("kafka").build();
 		/* END TRACING INSTRUMENTATION */
 
-		final Properties consumerConfigs = new Properties();
+		final var consumerConfigs = new Properties();
 		consumerConfigs.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
 				kafkaBootstrapServers);
 		consumerConfigs.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
@@ -49,24 +48,28 @@ public class TwitterConsoleConsumer {
 		consumerConfigs.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
 				schemaRegistryUrl);
 		consumerConfigs.setProperty(ConsumerConfig.GROUP_ID_CONFIG, "twitter-console");
-		final Consumer<String, Tweet> kafkaConsumer = new KafkaConsumer<>(
-				consumerConfigs);
-		final Consumer<String, Tweet> tracingConsumer = kafkaTracing
-				.consumer(kafkaConsumer);
+		final var kafkaConsumer = new KafkaConsumer<String, Tweet>(consumerConfigs);
+		final var tracingConsumer = kafkaTracing.consumer(kafkaConsumer);
 
 		tracingConsumer.subscribe(
 				Collections.singletonList(config.getString("topics.input-tweets")));
 
 		while (!Thread.interrupted()) {
-			final ConsumerRecords<String, Tweet> records = tracingConsumer
-					.poll(Duration.ofMillis(Long.MAX_VALUE));
-			for (ConsumerRecord<String, Tweet> record : records) {
-				brave.Span span = kafkaTracing.nextSpan(record).name("print-hello")
-						.start();
-				span.annotate("starting printing");
-				out.println(String.format("Record: %s", record));
-				span.annotate("printing finished");
-				span.finish();
+			final var records = tracingConsumer.poll(Duration.ofMillis(Long.MAX_VALUE));
+			for (var record : records) {
+				var span = kafkaTracing.nextSpan(record).name("print-hello").start();
+				try (var ignored = tracing.tracer().withSpanInScope(span)) {
+					span.annotate("starting printing");
+					out.println(String.format("Record: %s", record));
+					span.annotate("printing finished");
+				}
+				catch (RuntimeException | Error e) {
+					span.error(e);
+					throw e;
+				}
+				finally {
+					span.finish();
+				}
 			}
 		}
 

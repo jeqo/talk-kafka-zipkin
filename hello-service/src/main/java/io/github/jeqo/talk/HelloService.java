@@ -10,11 +10,8 @@ import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import org.apache.http.client.HttpClient;
-import org.glassfish.jersey.server.monitoring.ApplicationEventListener;
-import zipkin2.Span;
 import zipkin2.reporter.AsyncReporter;
-import zipkin2.reporter.kafka11.KafkaSender;
+import zipkin2.reporter.urlconnection.URLConnectionSender;
 
 public class HelloService extends Application<HelloServiceConfiguration> {
 
@@ -29,13 +26,13 @@ public class HelloService extends Application<HelloServiceConfiguration> {
 	@Override
 	public void run(HelloServiceConfiguration configuration, Environment environment) {
 		/* START TRACING INSTRUMENTATION */
-		final KafkaSender sender = KafkaSender.newBuilder()
-				.bootstrapServers(configuration.getKafkaBootstrapServers()).build();
-		final AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build();
-		final Tracing tracing = Tracing.newBuilder().localServiceName("hello-service")
+		final var sender = URLConnectionSender.newBuilder()
+				.endpoint(configuration.getZipkinEndpoint()).build();
+		final var reporter = AsyncReporter.builder(sender).build();
+		final var tracing = Tracing.newBuilder().localServiceName("hello-service")
 				.sampler(Sampler.ALWAYS_SAMPLE).spanReporter(reporter).build();
-		final HttpTracing httpTracing = HttpTracing.newBuilder(tracing).build();
-		final ApplicationEventListener jerseyTracingFilter = TracingApplicationEventListener
+		final var httpTracing = HttpTracing.newBuilder(tracing).build();
+		final var jerseyTracingFilter = TracingApplicationEventListener
 				.create(httpTracing);
 		environment.jersey().register(jerseyTracingFilter);
 		/* END TRACING INSTRUMENTATION */
@@ -45,21 +42,20 @@ public class HelloService extends Application<HelloServiceConfiguration> {
 		// new
 		// HttpClientBuilder(environment).using(configuration.getHttpClientConfiguration())
 		// .build(getName());
-		final HttpClient httpClient = TracingHttpClientBuilder.create(httpTracing)
-				.build();
-		final String url = configuration.getTranslationServiceUrl() + "/translate";
-		final HelloTranslationServiceClient translationServiceClient = new HelloTranslationServiceClient(
-				httpClient, url);
+		final var httpClient = TracingHttpClientBuilder.create(httpTracing).build();
+		final var url = configuration.getTranslationServiceUrl() + "/translate";
+		final var translationServiceClient = new HelloTranslationServiceClient(httpClient,
+				url);
 
-		final HelloResource helloResource = new HelloResource(translationServiceClient);
+		final var helloResource = new HelloResource(translationServiceClient);
 		environment.jersey().register(helloResource);
 
-		final HelloServiceHealthCheck helloServiceHealthCheck = new HelloServiceHealthCheck();
+		final var helloServiceHealthCheck = new HelloServiceHealthCheck();
 		environment.healthChecks().register("hello-service", helloServiceHealthCheck);
 	}
 
 	public static void main(String[] args) throws Exception {
-		final HelloService app = new HelloService();
+		HelloService app = new HelloService();
 		app.run(args);
 	}
 

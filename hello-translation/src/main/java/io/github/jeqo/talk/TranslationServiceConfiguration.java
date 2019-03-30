@@ -11,12 +11,24 @@ public class TranslationServiceConfiguration extends Configuration {
 	@NotNull
 	private String kafkaBootstrapServers;
 
+	@Valid
+	@NotNull
+	private String zipkinEndpoint;
+
 	public String getKafkaBootstrapServers() {
 		return kafkaBootstrapServers;
 	}
 
 	public void setKafkaBootstrapServers(String kafkaBootstrapServers) {
 		this.kafkaBootstrapServers = kafkaBootstrapServers;
+	}
+
+	public String getZipkinEndpoint() {
+		return zipkinEndpoint;
+	}
+
+	public void setZipkinEndpoint(String zipkinEndpoint) {
+		this.zipkinEndpoint = zipkinEndpoint;
 	}
 
 }

@@ -3,13 +3,13 @@ package io.github.jeqo.talk;
 import brave.Tracing;
 import brave.kafka.clients.KafkaTracing;
 import brave.sampler.Sampler;
-import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import org.apache.kafka.clients.consumer.*;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import zipkin2.Span;
 import zipkin2.reporter.AsyncReporter;
-import zipkin2.reporter.kafka11.KafkaSender;
+import zipkin2.reporter.urlconnection.URLConnectionSender;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -21,21 +21,20 @@ public class HelloConsumer {
 
 	public static void main(String[] args) {
 
-		final Config config = ConfigFactory.load();
+		final var config = ConfigFactory.load();
 		/* START TRACING INSTRUMENTATION */
-		final String kafkaBootstrapServers = config.getString("kafka.bootstrap-servers");
-		final KafkaSender sender = KafkaSender.newBuilder()
-				.bootstrapServers(kafkaBootstrapServers).build();
-		final AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build();
-		final Tracing tracing = Tracing.newBuilder().localServiceName("hello-consumer")
+		final var sender = URLConnectionSender.newBuilder()
+				.endpoint(config.getString("zipkin.endpoint")).build();
+		final var reporter = AsyncReporter.builder(sender).build();
+		final var tracing = Tracing.newBuilder().localServiceName("hello-consumer")
 				.sampler(Sampler.ALWAYS_SAMPLE).spanReporter(reporter).build();
-		final KafkaTracing kafkaTracing = KafkaTracing.newBuilder(tracing)
+		final var kafkaTracing = KafkaTracing.newBuilder(tracing)
 				.remoteServiceName("kafka").build();
 		/* END TRACING INSTRUMENTATION */
 
-		final Properties consumerConfigs = new Properties();
+		final var consumerConfigs = new Properties();
 		consumerConfigs.setProperty(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
-				kafkaBootstrapServers);
+				config.getString("kafka.bootstrap-servers"));
 		consumerConfigs.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
 				StringDeserializer.class.getName());
 		consumerConfigs.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
@@ -43,17 +42,14 @@ public class HelloConsumer {
 		consumerConfigs.setProperty(ConsumerConfig.GROUP_ID_CONFIG, "hello-consumer");
 		consumerConfigs.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
 				OffsetResetStrategy.EARLIEST.name().toLowerCase());
-		final Consumer<String, String> kafkaConsumer = new KafkaConsumer<>(
-				consumerConfigs);
-		final Consumer<String, String> tracingConsumer = kafkaTracing
-				.consumer(kafkaConsumer);
+		final var kafkaConsumer = new KafkaConsumer<String, String>(consumerConfigs);
+		final var tracingConsumer = kafkaTracing.consumer(kafkaConsumer);
 
 		tracingConsumer.subscribe(Collections.singletonList("hello"));
 
 		while (!Thread.interrupted()) {
-			final ConsumerRecords<String, String> records = tracingConsumer
-					.poll(Duration.ofMillis(Long.MAX_VALUE));
-			for (ConsumerRecord<String, String> record : records) {
+			var records = tracingConsumer.poll(Duration.ofMillis(Long.MAX_VALUE));
+			for (var record : records) {
 				brave.Span span = kafkaTracing.nextSpan(record).name("print-hello")
 						.start();
 				span.annotate("starting printing");
@@ -62,7 +58,6 @@ public class HelloConsumer {
 				span.finish();
 			}
 		}
-
 	}
 
 }

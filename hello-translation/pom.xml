@@ -36,6 +36,10 @@
             <groupId>io.zipkin.brave</groupId>
             <artifactId>brave-instrumentation-jersey-server</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.zipkin.reporter2</groupId>
+            <artifactId>zipkin-sender-urlconnection</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -48,7 +52,7 @@
                     <container>
                         <args>
                             <arg>server</arg>
-                            <arg>application.yml</arg>
+                            <arg>/app/resources/application.yml</arg>
                         </args>
                     </container>
                 </configuration>

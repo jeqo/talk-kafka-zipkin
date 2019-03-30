@@ -9,10 +9,8 @@ import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import org.glassfish.jersey.server.monitoring.ApplicationEventListener;
-import zipkin2.Span;
 import zipkin2.reporter.AsyncReporter;
-import zipkin2.reporter.kafka11.KafkaSender;
+import zipkin2.reporter.urlconnection.URLConnectionSender;
 
 public class TranslationService extends Application<TranslationServiceConfiguration> {
 
@@ -29,29 +27,27 @@ public class TranslationService extends Application<TranslationServiceConfigurat
 			Environment environment) {
 
 		/* START TRACING INSTRUMENTATION */
-		final KafkaSender sender = KafkaSender.newBuilder()
-				.bootstrapServers(configuration.getKafkaBootstrapServers()).build();
-		final AsyncReporter<Span> reporter = AsyncReporter.builder(sender).build();
-		final Tracing tracing = Tracing.newBuilder()
-				.localServiceName("translation-service").sampler(Sampler.ALWAYS_SAMPLE)
-				.spanReporter(reporter).build();
-		final HttpTracing httpTracing = HttpTracing.newBuilder(tracing).build();
-		final ApplicationEventListener jerseyTracingFilter = TracingApplicationEventListener
+		final var sender = URLConnectionSender.newBuilder()
+				.endpoint(configuration.getZipkinEndpoint()).build();
+		final var reporter = AsyncReporter.builder(sender).build();
+		final var tracing = Tracing.newBuilder().localServiceName("translation-service")
+				.sampler(Sampler.ALWAYS_SAMPLE).spanReporter(reporter).build();
+		final var httpTracing = HttpTracing.newBuilder(tracing).build();
+		final var jerseyTracingFilter = TracingApplicationEventListener
 				.create(httpTracing);
 		environment.jersey().register(jerseyTracingFilter);
 		/* END TRACING INSTRUMENTATION */
 
-		final TranslationRepository repository = new TranslationRepository();
-		final TranslationResource translationResource = new TranslationResource(
-				repository);
+		final var repository = new TranslationRepository();
+		final var translationResource = new TranslationResource(repository);
 		environment.jersey().register(translationResource);
 
-		final TranslationServiceHealthCheck healthCheck = new TranslationServiceHealthCheck();
+		final var healthCheck = new TranslationServiceHealthCheck();
 		environment.healthChecks().register("translation-service", healthCheck);
 	}
 
 	public static void main(String[] args) throws Exception {
-		final TranslationService app = new TranslationService();
+		final var app = new TranslationService();
 		app.run(args);
 	}
 
