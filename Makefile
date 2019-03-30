@@ -43,6 +43,10 @@ hello-consumer: ## starts hello consumer
 start-twitter: start ## start twitter demo services
 	docker-compose -f docker-compose.yml -f docker-compose-twitter.yml up -d
 
+.PHONY: start-haystack
+start-all-haystack: start ## start haystack demo services
+	docker-compose -f docker-compose.yml -f docker-compose-twitter.yml -f docker-compose-hello.yml -f docker-compose-haystack.yml up -d
+
 .PHONY: clone-submodule
 clone-submodule: ## clone submodules
 	git submodule update --init

@@ -1,0 +1,171 @@
+version: "3"
+services:
+  elasticsearch:
+    image: elastic/elasticsearch:6.0.1
+    environment:
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      xpack.security.enabled: "false"
+    #    ports:
+    #      - "9200:9200"
+    restart: always
+
+  cassandra:
+    image: cassandra:3.11.0
+    environment:
+      MAX_HEAP_SIZE: 256m
+      HEAP_NEWSIZE: 256m
+    # uncomment below port mapping to expose and connect to this application out of local docker container network
+  #    ports:
+  #      - "9042:9042"
+
+  zookeepersvc:
+    image: wurstmeister/zookeeper
+  #    ports:
+  #      - "2181:2181"
+
+  kafkasvc:
+    image: wurstmeister/kafka:2.11-1.1.1
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafkasvc:9092,OUTSIDE://localhost:19092
+      KAFKA_LISTENERS: INSIDE://:9092,OUTSIDE://:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_ZOOKEEPER_CONNECT: zookeepersvc:2181
+      KAFKA_CREATE_TOPICS: "proto-spans:1:1,metricpoints:1:1,metric-data-points:1:1,mdm:1:1,metrics:1:1,graph-nodes:1:1,service-graph:1:1,mapped-metrics:1:1,anomalies:1:1,alerts:1:1"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      #      - "9092:9092"
+      - "19092:19092"
+
+  ui:
+    image: expediadotcom/haystack-ui:1.1.4
+    volumes:
+      - ./haystack/ui:/data
+    ports:
+      - "28080:8080"
+    environment:
+      HAYSTACK_OVERRIDES_CONFIG_PATH: /data/connectors.json
+      HAYSTACK_PROP_CONNECTORS_TRACES_CONNECTOR__NAME: "zipkin"
+      HAYSTACK_PROP_CONNECTORS_TRACES_ZIPKIN__URL: 'http://zipkin:9411/api/v2'
+      HAYSTACK_PROP_CONNECTORS_TRENDS_CONNECTOR__NAME: "haystack"
+      HAYSTACK_PROP_CONNECTORS_TRENDS_METRIC__TANK__URL: "http://metrictank:6060"
+      HAYSTACK_PROP_CONNECTORS_SERVICE__GRAPH_CONNECTOR__NAME: "haystack"
+      HAYSTACK_PROP_CONNECTORS_SERVICE__GRAPH_WINDOW__SIZE__IN__SECS: 3600
+      HAYSTACK_PROP_CONNECTORS_SERVICE__GRAPH_SERVICE__GRAPH__URL: "http://graph-builder:8091/servicegraph"
+
+  pitchfork:
+    image: hotelsdotcom/pitchfork:latest
+    #    ports:
+    #      - "9411:9411"
+    environment:
+      PITCHFORK_FORWARDERS_LOGGING_ENABLED: "true"
+      PITCHFORK_FORWARDERS_LOGGING_LOG_FULL_SPAN: "true"
+      PITCHFORK_FORWARDERS_ZIPKIN_HTTP_ENABLED: "true"
+      PITCHFORK_FORWARDERS_ZIPKIN_HTTP_ENDPOINT: "http://zipkin:9411/api/v2/spans"
+      PITCHFORK_FORWARDERS_HAYSTACK_KAFKA_ENABLED: "true"
+      PITCHFORK_FORWARDERS_HAYSTACK_KAFKA_BOOTSTRAP_SERVERS: "kafkasvc:9092"
+
+  metrictank:
+    image: grafana/metrictank:0.10.1
+    environment:
+      MT_HTTP_MULTI_TENANT: "false"
+      MT_CARBON_IN_ENABLED: "false"
+      MT_KAFKA_MDM_IN_ENABLED: "true"
+      MT_CASSANDRA_ADDRS: "cassandra:9042"
+      MT_KAFKA_MDM_IN_BROKERS: "kafkasvc:9092"
+      MT_CASSANDRA_IDX_HOSTS: "cassandra:9042"
+      MT_STATS_ENABLED: "false"
+      MT_MEMORY_IDX_TAG_SUPPORT: "true"
+    depends_on:
+      - "kafkasvc"
+    restart: always
+    # uncomment below port mapping to expose and connect to this application out of local docker container network
+  #    ports:
+  #      - "6060:6060"
+
+  trends-transformer:
+    image: expediadotcom/haystack-span-timeseries-transformer
+    environment:
+      HAYSTACK_GRAPHITE_ENABLED: "false"
+      HAYSTACK_PROP_KAFKA_STREAMS_BOOTSTRAP_SERVERS: "kafkasvc:9092"
+      HAYSTACK_PROP_KAFKA_PRODUCER_TOPIC: "metric-data-points"
+      JAVA_XMS: 128m
+    entrypoint: ["/dockerize","-wait=tcp://kafkasvc:9092","-timeout=200s","-wait-retry-interval=40s","--","./start-app.sh"]
+    depends_on:
+      - "kafkasvc"
+    restart: always
+
+  trends-aggregator:
+    image: expediadotcom/haystack-timeseries-aggregator
+    environment:
+      HAYSTACK_GRAPHITE_ENABLED: "false"
+      HAYSTACK_PROP_KAFKA_STREAMS_BOOTSTRAP_SERVERS: "kafkasvc:9092"
+      HAYSTACK_PROP_KAFKA_CONSUMER_TOPIC: "metric-data-points"
+      JAVA_XMS: 128m
+    entrypoint: ["/dockerize","-wait=tcp://kafkasvc:9092","-timeout=200s","-wait-retry-interval=40s","--","./start-app.sh"]
+    depends_on:
+      - "kafkasvc"
+    restart: always
+
+  node-finder:
+    image: expediadotcom/haystack-service-graph-node-finder
+    environment:
+      JAVA_XMS: 128m
+      HAYSTACK_GRAPHITE_ENABLED: "false"
+      HAYSTACK_PROP_KAFKA_NODE_METADATA_TOPIC_PARTITION_COUNT: "1"
+      HAYSTACK_PROP_KAFKA_NODE_METADATA_TOPIC_REPLICATION_FACTOR: "1"
+    depends_on:
+      - "kafkasvc"
+    entrypoint: ["/dockerize","-wait=tcp://kafkasvc:9092","-timeout=200s","-wait-retry-interval=40s","--","./start-app.sh"]
+    restart: always
+
+  graph-builder:
+    image: expediadotcom/haystack-service-graph-graph-builder
+    environment:
+      JAVA_XMS: 128m
+      HAYSTACK_GRAPHITE_ENABLED: "false"
+      HAYSTACK_PROP_SERVICE_HTTP_PORT: "8091"
+      HAYSTACK_PROP_KAFKA_STREAMS_REPLICATION_FACTOR: 1
+    depends_on:
+      - "kafkasvc"
+    entrypoint: ["/dockerize","-wait=tcp://kafkasvc:9092","-timeout=200s","-wait-retry-interval=40s","--","./start-app.sh"]
+    restart: always
+    ports:
+      - "8091:8091"
+
+  ### Overrides ###
+  hello-service:
+    environment:
+      - ZIPKIN_ENDPOINT=http://pitchfork:9411/api/v2/spans
+  hello-client:
+    environment:
+      - ZIPKIN_ENDPOINT=http://pitchfork:9411/api/v2/spans
+  hello-translation:
+    environment:
+      - ZIPKIN_ENDPOINT=http://pitchfork:9411/api/v2/spans
+  hello-consumer:
+    environment:
+      - ZIPKIN_ENDPOINT=http://pitchfork:9411/api/v2/spans
+
+
+  twitter-stream-processor:
+    environment:
+      - ZIPKIN_ENDPOINT=http://pitchfork:9411/api/v2/spans
+  twitter-console-consumer:
+    environment:
+      - ZIPKIN_ENDPOINT=http://pitchfork:9411/api/v2/spans
+  twitter-connect:
+    environment:
+      CONNECT_PRODUCER_ZIPKIN_HTTP_ENDPOINT: "http://pitchfork:9411/api/v2/spans"
+
+  jdbc-connect:
+    environment:
+      CONNECT_CONSUMER_ZIPKIN_HTTP_ENDPOINT: "http://pitchfork:9411/api/v2/spans"
+
+  ksql-server:
+    environment:
+      KSQL_ZIPKIN_HTTP_ENDPOINT: "http://pitchfork:9411/api/v2/spans"

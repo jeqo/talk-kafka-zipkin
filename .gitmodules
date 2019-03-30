@@ -1,12 +1,12 @@
 [submodule "spigo"]
 	path = spigo
-	url = git@github.com:jeqo/spigo
+	url = https://github.com/jeqo/spigo
 [submodule "go-vizceral"]
 	path = go-vizceral
-	url = git@github.com:jeqo/go-vizceral
+	url = https://github.com/jeqo/go-vizceral
 [submodule "vizceral-example"]
 	path = vizceral-example
-	url = git@github.com:jeqo/vizceral-example
+	url = https://github.com/jeqo/vizceral-example
 [submodule "docker-images"]
 	path = docker-images
-	url = git@github.com:sysco-middleware/docker-images
+	url = https://github.com/sysco-middleware/docker-images
