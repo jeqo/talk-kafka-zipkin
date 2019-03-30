@@ -85,9 +85,14 @@ public class TwitterStreamProcessor {
 	}
 
 	private static Tweet parseTweet(JsonNode jsonValue) {
-		return Tweet.newBuilder().setText(jsonValue.get("Text").textValue())
+		Tweet tweet = Tweet.newBuilder().setText(jsonValue.get("Text").textValue())
 				.setLang(jsonValue.get("Lang").textValue())
 				.setUsername(jsonValue.get("User").get("ScreenName").textValue()).build();
+		brave.Span span = Tracing.currentTracer().currentSpan();
+		span.tag("tweet.username", tweet.getUsername().toString());
+		// if you want to add traceId to payload:
+		// tweetBuilder.setTraceId(span.context().traceIdString());
+		return tweet;
 	}
 
 }
