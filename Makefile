@@ -1,13 +1,15 @@
+MAVEN := "./mvnw"
+
 .PHONY: all
 all: clone-submodule format build
 
 .PHONY: format
 format:
-	sh mvnw spring-javaformat:apply
+	${MAVEN} spring-javaformat:apply
 
 .PHONY: build
 build: ## build java applications
-	sh mvnw clean install
+	${MAVEN} clean install
 
 .PHONY: start
 start: ## start docker-compose environment
@@ -64,9 +66,8 @@ twitter-jdbc: ## deploys kafka jdbc sink connector to postgres
 	sh deploy.sh
 
 .PHONY: twitter-console
-twitter-console: ## starts the kafka streams processor to parse json to avro
-	cd twitter-console-consumer/; \
-	java -jar target/twitter-console-consumer.jar
+twitter-console: ## starts kafka console consumer
+	docker-compose -f docker-compose.yml -f docker-compose-twitter.yml restart twitter-console-consumer
 
 .PHONY: download-deps
 download-deps:
