@@ -11,6 +11,10 @@ format:
 build: ## build java applications
 	${MAVEN} clean install
 
+.PHONY: publish
+publish: ## build docker images
+	${MAVEN} jib:build
+
 .PHONY: start
 start: ## start docker-compose environment
 	docker-compose up -d

@@ -11,7 +11,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import zipkin2.reporter.AsyncReporter;
-import zipkin2.reporter.kafka11.KafkaSender;
+import zipkin2.reporter.urlconnection.URLConnectionSender;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -28,8 +28,8 @@ public class TwitterConsoleConsumer {
 		final var schemaRegistryUrl = config.getString("schema-registry.url");
 
 		/* START TRACING INSTRUMENTATION */
-		final var sender = KafkaSender.newBuilder()
-				.bootstrapServers(kafkaBootstrapServers).build();
+		final var sender = URLConnectionSender.newBuilder()
+				.endpoint(config.getString("zipkin.endpoint")).build();
 		final var reporter = AsyncReporter.builder(sender).build();
 		final var tracing = Tracing.newBuilder()
 				.localServiceName("twitter-console-consumer")
