@@ -57,7 +57,8 @@ public class HelloServer {
                   return HttpResponse.of(MediaType.JSON, json);
                 } catch (Exception e) {
                   e.printStackTrace();
-                  return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8, e.getMessage());
+                  return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
+                      MediaType.PLAIN_TEXT_UTF_8, e.getMessage());
                 }
               }
             })

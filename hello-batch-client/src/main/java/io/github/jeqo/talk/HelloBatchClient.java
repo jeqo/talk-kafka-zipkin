@@ -64,7 +64,7 @@ public class HelloBatchClient {
 
       for (String name : names) {
         Span span = tracer.nextSpan().name("call-hello").start();
-        try(Tracer.SpanInScope ws = tracer.withSpanInScope(span)) {
+        try (Tracer.SpanInScope ws = tracer.withSpanInScope(span)) {
           span.tag("name", name);
           span.annotate("starting operation");
 
