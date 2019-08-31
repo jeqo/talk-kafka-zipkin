@@ -1,62 +1,29 @@
 package io.github.jeqo.talk;
 
-import brave.Tracing;
-import brave.http.HttpTracing;
-import brave.httpclient.TracingHttpClientBuilder;
-import brave.jersey.server.TracingApplicationEventListener;
-import brave.sampler.Sampler;
-import io.dropwizard.Application;
-import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
-import io.dropwizard.configuration.SubstitutingSourceProvider;
-import io.dropwizard.setup.Bootstrap;
-import io.dropwizard.setup.Environment;
-import zipkin2.reporter.AsyncReporter;
-import zipkin2.reporter.urlconnection.URLConnectionSender;
+import javax.annotation.Nullable;
 
-public class HelloService extends Application<HelloServiceConfiguration> {
+public class HelloService {
+  public static final String DEFAULT_LANG = "en";
+  public static final String HELLO_WORD = "hello";
+  public static final String DEFAULT_REPLY_TO = "you";
+  final TranslationClient translationClient;
 
-	@Override
-	public void initialize(Bootstrap<HelloServiceConfiguration> bootstrap) {
-		// Enable variable substitution with environment variables
-		bootstrap.setConfigurationSourceProvider(
-				new SubstitutingSourceProvider(bootstrap.getConfigurationSourceProvider(),
-						new EnvironmentVariableSubstitutor(false)));
-	}
+  public HelloService(TranslationClient translationClient) {
+    this.translationClient = translationClient;
+  }
 
-	@Override
-	public void run(HelloServiceConfiguration configuration, Environment environment) {
-		/* START TRACING INSTRUMENTATION */
-		final var sender = URLConnectionSender.newBuilder()
-				.endpoint(configuration.getZipkinEndpoint()).build();
-		final var reporter = AsyncReporter.builder(sender).build();
-		final var tracing = Tracing.newBuilder().localServiceName("hello-service")
-				.sampler(Sampler.ALWAYS_SAMPLE).spanReporter(reporter).build();
-		final var httpTracing = HttpTracing.newBuilder(tracing).build();
-		final var jerseyTracingFilter = TracingApplicationEventListener
-				.create(httpTracing);
-		environment.jersey().register(jerseyTracingFilter);
-		/* END TRACING INSTRUMENTATION */
-
-		// Without instrumentation
-		// final HttpClient httpClient =
-		// new
-		// HttpClientBuilder(environment).using(configuration.getHttpClientConfiguration())
-		// .build(getName());
-		final var httpClient = TracingHttpClientBuilder.create(httpTracing).build();
-		final var url = configuration.getTranslationServiceUrl() + "/translate";
-		final var translationServiceClient = new HelloTranslationServiceClient(httpClient,
-				url);
-
-		final var helloResource = new HelloResource(translationServiceClient);
-		environment.jersey().register(helloResource);
-
-		final var helloServiceHealthCheck = new HelloServiceHealthCheck();
-		environment.healthChecks().register("hello-service", helloServiceHealthCheck);
-	}
-
-	public static void main(String[] args) throws Exception {
-		HelloService app = new HelloService();
-		app.run(args);
-	}
-
+  /**
+   *
+   */
+  public HelloRepresentation sayHello(String lang, @Nullable String name) {
+    //prepare hello
+    String hello = translationClient.translate(HELLO_WORD, lang);
+    if (hello == null) hello = HELLO_WORD;
+    //prepare reply
+    String replyTo = null;
+    if (name != null) replyTo = name;
+    if (name == null) replyTo = translationClient.translate(DEFAULT_REPLY_TO, lang);
+    if (name == null) replyTo = DEFAULT_REPLY_TO;
+    return new HelloRepresentation(String.format("%s, %s", hello, replyTo), lang);
+  }
 }
