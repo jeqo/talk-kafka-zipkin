@@ -24,7 +24,7 @@ public class HelloConsumer {
 		final var config = ConfigFactory.load();
 		/* START TRACING INSTRUMENTATION */
 		final var sender = URLConnectionSender.newBuilder()
-				.endpoint(config.getString("zipkin.endpoint")).build();
+				.endpoint(config.getString("zipkin.http.url")).build();
 		final var reporter = AsyncReporter.builder(sender).build();
 		final var tracing = Tracing.newBuilder().localServiceName("hello-consumer")
 				.sampler(Sampler.ALWAYS_SAMPLE).spanReporter(reporter).build();

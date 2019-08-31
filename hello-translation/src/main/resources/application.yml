@@ -1,9 +1,0 @@
-server:
-  type: simple
-  applicationContextPath: /
-  adminContextPath: /admin
-  connector:
-    type: http
-    port: 18010
-kafkaBootstrapServers: ${KAFKA_BOOTSTRAP_SERVERS:-localhost:29092}
-zipkinEndpoint: ${ZIPKIN_ENDPOINT:-localhost:9411}

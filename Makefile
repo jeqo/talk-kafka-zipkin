@@ -92,3 +92,12 @@ vizceral: ## start vizceral example
 	cd vizceral-example/; \
 	npm install; \
 	npm run dev
+
+.PHONY: kafka-topics
+kafka-topics:
+	docker-compose exec kafka kafka-topics \
+		--zookeeper zookeeper:2181 --create --topic zipkin-spans --partitions 1 --replication-factor 1 --if-not-exists
+	docker-compose exec kafka kafka-topics \
+		--zookeeper zookeeper:2181 --create --topic zipkin-trace --partitions 1 --replication-factor 1 --if-not-exists
+	docker-compose exec kafka kafka-topics \
+		--zookeeper zookeeper:2181 --create --topic zipkin-dependency --partitions 1 --replication-factor 1 --if-not-exists
