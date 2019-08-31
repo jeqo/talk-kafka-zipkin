@@ -7,6 +7,3 @@
 [submodule "vizceral-example"]
 	path = vizceral-example
 	url = https://github.com/jeqo/vizceral-example
-[submodule "docker-images"]
-	path = docker-images
-	url = https://github.com/sysco-middleware/docker-images

@@ -4,26 +4,24 @@ services:
   hello-service:
     image: jeqo/hello-service
     ports:
-      - 18000:18000
+      - 8080:8080
+    environment:
+      - TRANSLATION_SERVICE_URL=http://hello-translation-service:8090
+      - ZIPKIN_HTTP_URL=http://zipkin:9411/api/v2/spans
+  hello-batch-client:
+    image: jeqo/hello-batch-client
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - TRANSLATION_SERVICE_BASE_URL=http://hello-translation:18010
-      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
-  hello-client:
-    image: jeqo/hello-client
-    environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - HELLO_SERVICE_BASE_URL=http://hello-service:18000
-      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
-  hello-translation:
+      - HELLO_SERVICE_BASE_URL=http://hello-service:8080
+      - ZIPKIN_HTTP_URL=http://zipkin:9411/api/v2/spans
+  hello-translation-service:
     image: jeqo/hello-translation
     ports:
-      - 18010:18010
+      - 8090:8090
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - ZIPKIN_HTTP_URL=http://zipkin:9411/api/v2/spans
   hello-consumer:
     image: jeqo/hello-consumer
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
+      - ZIPKIN_HTTP_URL=http://zipkin:9411/api/v2/spans

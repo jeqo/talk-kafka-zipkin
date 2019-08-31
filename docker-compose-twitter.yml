@@ -16,9 +16,7 @@ services:
       - ZIPKIN_ENDPOINT=http://zipkin:9411/api/v2/spans
 
   twitter-connect:
-    image: syscomiddleware/cp-kafka-connect:5.0.0-0.1
-    build:
-      context: docker-images/confluent-kafka-connect
+    image: confluentinc/cp-kafka-connect:5.3.0
     ports:
       - 8083:8083
     environment:
@@ -47,9 +45,11 @@ services:
       CONNECT_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
     volumes:
       - ./lib/kafka-interceptor-zipkin.jar:/etc/kafka-connect/jars/kafka-interceptor-zipkin.jar
+      - ./lib/etc/kafka-connect-twitter:/lib/etc/kafka-connect-twitter
+      - ./lib/usr/share/kafka-connect/kafka-connect-twitter:/usr/share/java/kafka-connect-twitter
 
   jdbc-connect:
-    image: confluentinc/cp-kafka-connect:5.1.2
+    image: confluentinc/cp-kafka-connect:5.3.0
     ports:
       - 8084:8084
     environment:
@@ -88,7 +88,7 @@ services:
       - 18080:8080
 
   ksql-server:
-    image: confluentinc/cp-ksql-server:5.1.2
+    image: confluentinc/cp-ksql-server:5.3.0
     ports:
     - 8088:8088
     environment:
@@ -104,3 +104,12 @@ services:
       KSQL_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
     volumes:
     - ./lib/kafka-interceptor-zipkin.jar:/usr/share/java/ksql-server/kafka-interceptor-zipkin.jar
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:5.3.0
+    ports:
+      - 8081:8081
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: localhost
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092

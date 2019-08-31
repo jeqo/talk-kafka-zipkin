@@ -35,15 +35,6 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     depends_on:
       - zookeeper
-  schema-registry:
-    image: confluentinc/cp-schema-registry:5.3.0
-    ports:
-      - 8081:8081
-    environment:
-      SCHEMA_REGISTRY_HOST_NAME: localhost
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
-    depends_on:
-      - kafka
+
 volumes:
   zipkin:
