@@ -19,24 +19,19 @@
     <dependency>
       <groupId>com.typesafe</groupId>
       <artifactId>config</artifactId>
-      <version>${config.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-streams</artifactId>
-      <version>${kafka.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
-      <version>${avro.version}</version>
     </dependency>
     <dependency>
       <groupId>io.confluent</groupId>
       <artifactId>kafka-streams-avro-serde</artifactId>
-      <version>${confluent.version}</version>
     </dependency>
-
     <!-- Tracing Instrumentation -->
     <dependency>
       <groupId>io.zipkin.brave</groupId>
@@ -45,10 +40,6 @@
     <dependency>
       <groupId>io.zipkin.brave</groupId>
       <artifactId>brave-instrumentation-kafka-streams</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.zipkin.reporter2</groupId>
-      <artifactId>zipkin-sender-kafka</artifactId>
     </dependency>
     <dependency>
       <groupId>io.zipkin.reporter2</groupId>

@@ -11,10 +11,6 @@
 
   <artifactId>hello-service</artifactId>
 
-  <properties>
-    <main.class>io.github.jeqo.talk.HelloServiceApp</main.class>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>com.linecorp.armeria</groupId>
@@ -36,16 +32,7 @@
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
     </dependency>
-
     <!-- Tracing Instrumentation -->
-    <!--        <dependency>-->
-    <!--            <groupId>io.zipkin.brave</groupId>-->
-    <!--            <artifactId>brave-instrumentation-jersey-server</artifactId>-->
-    <!--        </dependency>-->
-    <!--        <dependency>-->
-    <!--            <groupId>io.zipkin.brave</groupId>-->
-    <!--            <artifactId>brave-instrumentation-httpclient</artifactId>-->
-    <!--        </dependency>-->
     <dependency>
       <groupId>io.zipkin.reporter2</groupId>
       <artifactId>zipkin-sender-urlconnection</artifactId>
@@ -55,17 +42,18 @@
   <build>
     <plugins>
       <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifest>
+              <mainClass>io.github.jeqo.talk.HelloServer</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>com.google.cloud.tools</groupId>
         <artifactId>jib-maven-plugin</artifactId>
-        <version>0.10.0</version>
-        <configuration>
-          <container>
-            <args>
-              <arg>server</arg>
-              <arg>/app/resources/application.yml</arg>
-            </args>
-          </container>
-        </configuration>
       </plugin>
     </plugins>
   </build>
