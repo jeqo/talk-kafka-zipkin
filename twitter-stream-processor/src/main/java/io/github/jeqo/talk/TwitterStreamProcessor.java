@@ -9,18 +9,20 @@ import com.typesafe.config.ConfigFactory;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.github.jeqo.talk.avro.Tweet;
+import java.io.IOException;
 import java.util.Objects;
 import java.util.Properties;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import zipkin2.reporter.AsyncReporter;
 import zipkin2.reporter.urlconnection.URLConnectionSender;
 
 public class TwitterStreamProcessor {
-
+  private static final Logger LOG = LoggerFactory.getLogger(TwitterStreamProcessor.class);
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   public static void main(String[] args) {
@@ -33,7 +35,7 @@ public class TwitterStreamProcessor {
     final var reporter = AsyncReporter.builder(sender).build();
     final var tracing = Tracing.newBuilder().localServiceName("stream-transform")
         .sampler(Sampler.ALWAYS_SAMPLE).spanReporter(reporter).build();
-    final var kafkaStreamsTracing = KafkaStreamsTracing.create(tracing);
+    final var ksTracing = KafkaStreamsTracing.create(tracing);
     /* END TRACING INSTRUMENTATION */
 
     final var streamsConfig = new Properties();
@@ -51,28 +53,26 @@ public class TwitterStreamProcessor {
     final var builder = new StreamsBuilder();
     builder.stream(config.getString("topics.input-tweets-json"),
         Consumed.with(Serdes.String(), Serdes.String()))
-        .transform(kafkaStreamsTracing.map("parse_json",
-            TwitterStreamProcessor::parseJson))
+        .transformValues(ksTracing.mapValues("parse_json", TwitterStreamProcessor::parseJson))
         .filterNot((k, v) -> Objects.isNull(v))
         .filter(TwitterStreamProcessor::hasHashtag)
-        .transformValues(kafkaStreamsTracing.mapValues("json_to_avro",
-            TwitterStreamProcessor::parseTweet))
+        .transformValues(ksTracing.mapValues("json_to_avro", TwitterStreamProcessor::parseTweet))
         .to(config.getString("topics.output-tweets-avro"));
 
     final var topology = builder.build();
-    final var kafkaStreams = kafkaStreamsTracing.kafkaStreams(topology,
+    final var kafkaStreams = ksTracing.kafkaStreams(topology,
         streamsConfig);
     kafkaStreams.start();
 
     Runtime.getRuntime().addShutdownHook(new Thread(kafkaStreams::close));
   }
 
-  private static KeyValue<String, JsonNode> parseJson(String key, String value) {
+  private static JsonNode parseJson(String key, String value) {
     try {
-      return KeyValue.pair(key, OBJECT_MAPPER.readTree(value));
-    } catch (Exception e) {
-      e.printStackTrace();
-      return KeyValue.pair(key, null);
+      return OBJECT_MAPPER.readTree(value);
+    } catch (IOException e) {
+      LOG.error("Error parsing payload", e);
+      return null;
     }
   }
 

@@ -3,15 +3,19 @@ version: '3'
 services:
   zipkin:
     # Experimental Zipkin with Kafka storage
-    image: jeqo/zipkin-kafka
+    image: jeqo/zipkin-kafka:0.5.5-SNAPSHOT
+    container_name: zipkin
+    hostname: zipkin
     # Official Zipkin Image
     # image: openzipkin/zipkin:2.12.6
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_STORAGE_DIR: /data
     volumes:
       - zipkin:/data
     ports:
       - 9411:9411
+      - 9412:9412
     depends_on:
       - kafka
   zookeeper:
