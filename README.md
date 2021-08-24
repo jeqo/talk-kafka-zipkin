@@ -324,8 +324,8 @@ message is consumed by consumers, called [Kafka Interceptors](https://cwiki.apac
 This interceptors create a space to introduce tracing code to mark when messages are sent and 
 consumed.
 
-At [Sysco AS](https://github.com/sysco-middleware) we have developed interceptors
-for Zipkin: <https://github.com/sysco-middleware/kafka-interceptor-zipkin> 
+At [Sysco AS](https://github.com/sysco-middleware) we developed interceptors
+for Zipkin: <https://github.com/openzipkin-contrib/brave-kafka-interceptor> (now at Zipkin contribution projects)
 
 These interceptors have to be added to applications classpath, where can be referenced via properties:
 
@@ -343,14 +343,14 @@ And Confluent Docker images:
 
 Connectors:
 ```yaml
-      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor'
-      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: 'no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor'
+      CONNECT_PRODUCER_INTERCEPTOR_CLASSES: 'brave.kafka.interceptor.TracingProducerInterceptor'
+      CONNECT_CONSUMER_INTERCEPTOR_CLASSES: 'brave.kafka.interceptor.TracingConsumerInterceptor'
 ```
 
 KSQL:
 ```yaml
-      KSQL_PRODUCER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingProducerInterceptor"
-      KSQL_CONSUMER_INTERCEPTOR_CLASSES: "no.sysco.middleware.kafka.interceptor.zipkin.TracingConsumerInterceptor"
+      KSQL_PRODUCER_INTERCEPTOR_CLASSES: "brave.kafka.interceptor.TracingProducerInterceptor"
+      KSQL_CONSUMER_INTERCEPTOR_CLASSES: "brave.kafka.interceptor.TracingConsumerInterceptor"
 ```
 
 ### Tracing Kafka Source Connector
