@@ -1,7 +1,6 @@
 package io.github.jeqo.talk;
 
 public class HelloRepresentation {
-
   final String hello;
   final String lang;
 

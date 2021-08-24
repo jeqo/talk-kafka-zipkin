@@ -5,7 +5,7 @@ all: clone-submodule format build
 
 .PHONY: format
 format:
-	${MAVEN} spring-javaformat:apply
+	${MAVEN} prettier:write
 
 .PHONY: build
 build: ## build java applications
@@ -29,15 +29,15 @@ hello-server: ## start only hello server
 
 .PHONY: test-hello
 test-hello:
-	curl http://localhost:18000/hello/service
+	curl http://localhost:8080/hello/service
 
 .PHONY: hello-translation
 hello-translation: ## starts hello service
-	docker-compose -f docker-compose.yml -f docker-compose-hello.yml up -d hello-translation
+	docker-compose -f docker-compose.yml -f docker-compose-hello.yml up -d hello-translation-service
 
 .PHONY: hello-client
 hello-client: ## start hello client
-	docker-compose -f docker-compose.yml -f docker-compose-hello.yml up -d hello-client
+	docker-compose -f docker-compose.yml -f docker-compose-hello.yml up -d hello-batch-client
 
 .PHONY: hello-consumer
 hello-consumer: ## starts hello consumer

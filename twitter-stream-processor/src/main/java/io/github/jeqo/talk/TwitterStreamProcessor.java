@@ -22,46 +22,69 @@ import zipkin2.reporter.AsyncReporter;
 import zipkin2.reporter.urlconnection.URLConnectionSender;
 
 public class TwitterStreamProcessor {
-  private static final Logger LOG = LoggerFactory.getLogger(TwitterStreamProcessor.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+    TwitterStreamProcessor.class
+  );
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   public static void main(String[] args) {
-
     final var config = ConfigFactory.load();
 
     /* START TRACING INSTRUMENTATION */
-    final var sender = URLConnectionSender.newBuilder()
-        .endpoint(config.getString("zipkin.endpoint")).build();
+    final var sender = URLConnectionSender
+      .newBuilder()
+      .endpoint(config.getString("zipkin.endpoint"))
+      .build();
     final var reporter = AsyncReporter.builder(sender).build();
-    final var tracing = Tracing.newBuilder().localServiceName("stream-transform")
-        .sampler(Sampler.ALWAYS_SAMPLE).spanReporter(reporter).build();
+    final var tracing = Tracing
+      .newBuilder()
+      .localServiceName("stream-transform")
+      .sampler(Sampler.ALWAYS_SAMPLE)
+      .spanReporter(reporter)
+      .build();
     final var ksTracing = KafkaStreamsTracing.create(tracing);
     /* END TRACING INSTRUMENTATION */
 
     final var streamsConfig = new Properties();
-    streamsConfig.setProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG,
-        config.getString("kafka.bootstrap-servers"));
-    streamsConfig.setProperty(StreamsConfig.APPLICATION_ID_CONFIG,
-        "stream-transform");
-    streamsConfig.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG,
-        Serdes.String().getClass().getName());
-    streamsConfig.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG,
-        SpecificAvroSerde.class);
-    streamsConfig.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
-        config.getString("schema-registry.url"));
+    streamsConfig.setProperty(
+      StreamsConfig.BOOTSTRAP_SERVERS_CONFIG,
+      config.getString("kafka.bootstrap-servers")
+    );
+    streamsConfig.setProperty(
+      StreamsConfig.APPLICATION_ID_CONFIG,
+      "stream-transform"
+    );
+    streamsConfig.put(
+      StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG,
+      Serdes.String().getClass().getName()
+    );
+    streamsConfig.put(
+      StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG,
+      SpecificAvroSerde.class
+    );
+    streamsConfig.put(
+      AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
+      config.getString("schema-registry.url")
+    );
 
     final var builder = new StreamsBuilder();
-    builder.stream(config.getString("topics.input-tweets-json"),
-        Consumed.with(Serdes.String(), Serdes.String()))
-        .transformValues(ksTracing.mapValues("parse_json", TwitterStreamProcessor::parseJson))
-        .filterNot((k, v) -> Objects.isNull(v))
-        .filter(TwitterStreamProcessor::hasHashtag)
-        .transformValues(ksTracing.mapValues("json_to_avro", TwitterStreamProcessor::parseTweet))
-        .to(config.getString("topics.output-tweets-avro"));
+    builder
+      .stream(
+        config.getString("topics.input-tweets-json"),
+        Consumed.with(Serdes.String(), Serdes.String())
+      )
+      .transformValues(
+        ksTracing.mapValues("parse_json", TwitterStreamProcessor::parseJson)
+      )
+      .filterNot((k, v) -> Objects.isNull(v))
+      .filter(TwitterStreamProcessor::hasHashtag)
+      .transformValues(
+        ksTracing.mapValues("json_to_avro", TwitterStreamProcessor::parseTweet)
+      )
+      .to(config.getString("topics.output-tweets-avro"));
 
     final var topology = builder.build();
-    final var kafkaStreams = ksTracing.kafkaStreams(topology,
-        streamsConfig);
+    final var kafkaStreams = ksTracing.kafkaStreams(topology, streamsConfig);
     kafkaStreams.start();
 
     Runtime.getRuntime().addShutdownHook(new Thread(kafkaStreams::close));
@@ -81,9 +104,12 @@ public class TwitterStreamProcessor {
   }
 
   private static Tweet parseTweet(JsonNode jsonValue) {
-    var tweet = Tweet.newBuilder().setText(jsonValue.get("Text").textValue())
-        .setLang(jsonValue.get("Lang").textValue())
-        .setUsername(jsonValue.get("User").get("ScreenName").textValue()).build();
+    var tweet = Tweet
+      .newBuilder()
+      .setText(jsonValue.get("Text").textValue())
+      .setLang(jsonValue.get("Lang").textValue())
+      .setUsername(jsonValue.get("User").get("ScreenName").textValue())
+      .build();
     var span = Tracing.currentTracer().currentSpan();
     span.tag("tweet.username", tweet.getUsername().toString());
     // if you want to add traceId to payload:

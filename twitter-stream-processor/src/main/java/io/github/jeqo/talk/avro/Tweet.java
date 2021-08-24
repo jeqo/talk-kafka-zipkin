@@ -9,14 +9,15 @@ import org.apache.avro.specific.SpecificData;
 
 @SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
-public class Tweet extends org.apache.avro.specific.SpecificRecordBase
-    implements org.apache.avro.specific.SpecificRecord {
-
+public class Tweet
+  extends org.apache.avro.specific.SpecificRecordBase
+  implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 4573012774324103573L;
 
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser()
-      .parse(
-          "{\"type\":\"record\",\"name\":\"Tweet\",\"namespace\":\"io.github.jeqo.talk.avro\",\"fields\":[{\"name\":\"text\",\"type\":\"string\"},{\"name\":\"username\",\"type\":\"string\"},{\"name\":\"lang\",\"type\":[\"string\",\"null\"]}]}");
+  .parse(
+      "{\"type\":\"record\",\"name\":\"Tweet\",\"namespace\":\"io.github.jeqo.talk.avro\",\"fields\":[{\"name\":\"text\",\"type\":\"string\"},{\"name\":\"username\",\"type\":\"string\"},{\"name\":\"lang\",\"type\":[\"string\",\"null\"]}]}"
+    );
 
   public static org.apache.avro.Schema getClassSchema() {
     return SCHEMA$;
@@ -36,8 +37,7 @@ public class Tweet extends org.apache.avro.specific.SpecificRecordBase
    * values from the schema. If that is desired then one should use
    * <code>newBuilder()</code>.
    */
-  public Tweet() {
-  }
+  public Tweet() {}
 
   /**
    * All-args constructor.
@@ -45,8 +45,11 @@ public class Tweet extends org.apache.avro.specific.SpecificRecordBase
    * @param username The new value for username
    * @param lang The new value for lang
    */
-  public Tweet(java.lang.CharSequence text, java.lang.CharSequence username,
-      java.lang.CharSequence lang) {
+  public Tweet(
+    java.lang.CharSequence text,
+    java.lang.CharSequence username,
+    java.lang.CharSequence lang
+  ) {
     this.text = text;
     this.username = username;
     this.lang = lang;
@@ -150,7 +153,8 @@ public class Tweet extends org.apache.avro.specific.SpecificRecordBase
    * @return A new Tweet RecordBuilder
    */
   public static io.github.jeqo.talk.avro.Tweet.Builder newBuilder(
-      io.github.jeqo.talk.avro.Tweet.Builder other) {
+    io.github.jeqo.talk.avro.Tweet.Builder other
+  ) {
     return new io.github.jeqo.talk.avro.Tweet.Builder(other);
   }
 
@@ -160,7 +164,8 @@ public class Tweet extends org.apache.avro.specific.SpecificRecordBase
    * @return A new Tweet RecordBuilder
    */
   public static io.github.jeqo.talk.avro.Tweet.Builder newBuilder(
-      io.github.jeqo.talk.avro.Tweet other) {
+    io.github.jeqo.talk.avro.Tweet other
+  ) {
     return new io.github.jeqo.talk.avro.Tweet.Builder(other);
   }
 
@@ -168,9 +173,8 @@ public class Tweet extends org.apache.avro.specific.SpecificRecordBase
    * RecordBuilder for Tweet instances.
    */
   public static class Builder
-      extends org.apache.avro.specific.SpecificRecordBuilderBase<Tweet>
-      implements org.apache.avro.data.RecordBuilder<Tweet> {
-
+    extends org.apache.avro.specific.SpecificRecordBuilderBase<Tweet>
+    implements org.apache.avro.data.RecordBuilder<Tweet> {
     private java.lang.CharSequence text;
 
     private java.lang.CharSequence username;
@@ -236,7 +240,8 @@ public class Tweet extends org.apache.avro.specific.SpecificRecordBase
      * @return This builder.
      */
     public io.github.jeqo.talk.avro.Tweet.Builder setText(
-        java.lang.CharSequence value) {
+      java.lang.CharSequence value
+    ) {
       validate(fields()[0], value);
       this.text = value;
       fieldSetFlags()[0] = true;
@@ -275,7 +280,8 @@ public class Tweet extends org.apache.avro.specific.SpecificRecordBase
      * @return This builder.
      */
     public io.github.jeqo.talk.avro.Tweet.Builder setUsername(
-        java.lang.CharSequence value) {
+      java.lang.CharSequence value
+    ) {
       validate(fields()[1], value);
       this.username = value;
       fieldSetFlags()[1] = true;
@@ -314,7 +320,8 @@ public class Tweet extends org.apache.avro.specific.SpecificRecordBase
      * @return This builder.
      */
     public io.github.jeqo.talk.avro.Tweet.Builder setLang(
-        java.lang.CharSequence value) {
+      java.lang.CharSequence value
+    ) {
       validate(fields()[2], value);
       this.lang = value;
       fieldSetFlags()[2] = true;
@@ -343,11 +350,17 @@ public class Tweet extends org.apache.avro.specific.SpecificRecordBase
     public Tweet build() {
       try {
         Tweet record = new Tweet();
-        record.text = fieldSetFlags()[0] ? this.text
+        record.text =
+          fieldSetFlags()[0]
+            ? this.text
             : (java.lang.CharSequence) defaultValue(fields()[0]);
-        record.username = fieldSetFlags()[1] ? this.username
+        record.username =
+          fieldSetFlags()[1]
+            ? this.username
             : (java.lang.CharSequence) defaultValue(fields()[1]);
-        record.lang = fieldSetFlags()[2] ? this.lang
+        record.lang =
+          fieldSetFlags()[2]
+            ? this.lang
             : (java.lang.CharSequence) defaultValue(fields()[2]);
         return record;
       } catch (Exception e) {
@@ -356,18 +369,19 @@ public class Tweet extends org.apache.avro.specific.SpecificRecordBase
     }
   }
 
-  private static final org.apache.avro.io.DatumWriter WRITER$ =
-      new org.apache.avro.specific.SpecificDatumWriter(
-          SCHEMA$);
+  private static final org.apache.avro.io.DatumWriter WRITER$ = new org.apache.avro.specific.SpecificDatumWriter(
+    SCHEMA$
+  );
 
   @Override
-  public void writeExternal(java.io.ObjectOutput out) throws java.io.IOException {
+  public void writeExternal(java.io.ObjectOutput out)
+    throws java.io.IOException {
     WRITER$.write(this, SpecificData.getEncoder(out));
   }
 
-  private static final org.apache.avro.io.DatumReader READER$ =
-      new org.apache.avro.specific.SpecificDatumReader(
-          SCHEMA$);
+  private static final org.apache.avro.io.DatumReader READER$ = new org.apache.avro.specific.SpecificDatumReader(
+    SCHEMA$
+  );
 
   @Override
   public void readExternal(java.io.ObjectInput in) throws java.io.IOException {

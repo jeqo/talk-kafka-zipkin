@@ -15,7 +15,7 @@ services:
       - HELLO_SERVICE_BASE_URL=http://hello-service:8080
       - ZIPKIN_HTTP_URL=http://zipkin:9411/api/v2/spans
   hello-translation-service:
-    image: jeqo/hello-translation
+    image: jeqo/hello-translation-service
     ports:
       - 8090:8090
     environment:

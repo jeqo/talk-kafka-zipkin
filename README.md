@@ -27,7 +27,7 @@ This lab introduce initial concepts about distributed tracing like `span`, `trac
 
 ### Scenario 1: "Hello, World" services (synchronous. RPC calls)
 
-There is a service called Hello World that is capable of say hi in different languages, by using a Hello 
+There is a service called `Hello World` that is capable of say hi in different languages, by using a Hello 
 Translation service, and return a response to a user.
 
 ```
@@ -83,19 +83,20 @@ transaction: since a request is received and how it propagates.
 2. Make a call (that will produce an error as `translation` service is down):
 
 ```bash
-$ make test-hello
+make test-hello
 ```
 
 or 
 
 ```bash
-$ curl http://localhost:18000/hello/service
-{"code":500,"message":"There was an error processing your request. It has been logged (ID f0cbd609d1b40741)."}
+$ curl http://localhost:8080/hello/service
+{
+  "hello": "hello, service",
+  "lang": "en"
+}
 ```
 
 3. And go to Zipkin to check the traces <http://localhost:9411/>:
-
-> new Zipkin UI released recently, called Zipkin Lens, has been used.
 
 Zipkin UI has 3 main pages: Search, Trace view, and Dependencies. We will explore each of them along 
 these demos.
@@ -132,7 +133,7 @@ make hello-translation
 5. Now, try to call the `hello-service` via curl: 
 
 ```bash
-$ curl localhost:18000/hello/service
+$ curl localhost:8080/hello/service
 {"hello":"Hello, service","lang":"en"}
 ```
 
@@ -148,35 +149,35 @@ spaces between spans represent processing and network latency that has not been 
 Spans can be created by using Tracing libraries. Zipkin has a Java library called `brave`, here is
 an example of how to create a span:
 
-`TranslationResource.java`:
+`TranslationServer.java`:
 
 ```java
-  @GET
-  @Path("{lang}")
-  @Produces(MediaType.TEXT_PLAIN)
-  public Response translateHello(@PathParam("lang") final String lang) {
-    /* START CUSTOM INSTRUMENTATION */
-    final ScopedSpan span = tracer.startScopedSpan("query-repository");
-    span.annotate("started-query");
-    span.tag("lang", Optional.ofNullable(lang).orElse(""));
-    final String hello = repository.find(lang);
-    span.annotate("finished-query");
-    span.finish();
-    /* END CUSTOM INSTRUMENTATION */
-    
-    return Response.ok(hello).build();
-  }
+final var server = Server
+    .builder()
+    .http(config.getInt("http.port"))
+    .decorator(BraveService.newDecorator(httpTracing))
+    .service(
+    "/",
+    (ctx, req) -> HttpResponse.of("Welcome to translation server")
+    )
+    .service(
+    "/translate/{to}/{word}",
+    (ctx, req) ->
+    HttpResponse.of(
+    store.find(ctx.pathParam("to"), ctx.pathParam("word"))
+    )
+    )
+    .build();
 ```
 
 But most spans are created by using *instrumented* libraries: instrumentation is wrapping libraries
 APIs, so you don't have to.
 
-The first 2 spans are created by the instrumentation for 
-[Apache HTTP Client](https://github.com/openzipkin/brave/tree/master/instrumentation/httpclient) 
-and [Jersey HTTP Server](https://github.com/openzipkin/brave/tree/master/instrumentation/jersey-server):
+The spans are created by the instrumentation for 
+[Armeria](https://armeria.dev/docs/advanced-zipkin):
 
-By using existing libraries instrumentation you will get most of the picture on how 
-your service collaborate, but when you need to get details about an specific task part
+By using existing libraries' instrumentation you will get most of the picture on how 
+your service collaborate, but when you need to get details about a specific task part
 of your code, then you can add "custom" `spans`, so your debugging is more specific.
 
 Even though this is a too simple example, getting to know how a successful and failed executions look like increase confidence and reduce cognitive load.
@@ -230,7 +231,7 @@ make hello-client
 
 This time, let's focus on the initial spans by selecting this period on the timeline.
 We can see for instance that `hello-consumer` is polling and processing the event, taking a few
-nano seconds, and metadata as Kafka topic name and broker are collected.
+nanoseconds, and metadata as Kafka topic name and broker are collected.
 
 ![](docs/hello-5.png)
 

@@ -9,14 +9,15 @@ import org.apache.avro.specific.SpecificData;
 
 @SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
-public class Tweet extends org.apache.avro.specific.SpecificRecordBase
-    implements org.apache.avro.specific.SpecificRecord {
-
+public class Tweet
+  extends org.apache.avro.specific.SpecificRecordBase
+  implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 4573012774324103573L;
 
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser()
-      .parse(
-          "{\"type\":\"record\",\"name\":\"Tweet\",\"namespace\":\"io.github.jeqo.talk.avro\",\"fields\":[{\"name\":\"text\",\"type\":\"string\"},{\"name\":\"username\",\"type\":\"string\"},{\"name\":\"lang\",\"type\":[\"string\",\"null\"]}]}");
+  .parse(
+      "{\"type\":\"record\",\"name\":\"Tweet\",\"namespace\":\"io.github.jeqo.talk.avro\",\"fields\":[{\"name\":\"text\",\"type\":\"string\"},{\"name\":\"username\",\"type\":\"string\"},{\"name\":\"lang\",\"type\":[\"string\",\"null\"]}]}"
+    );
 
   public static org.apache.avro.Schema getClassSchema() {
     return SCHEMA$;
@@ -36,8 +37,7 @@ public class Tweet extends org.apache.avro.specific.SpecificRecordBase
    * values from the schema. If that is desired then one should use
    * <code>newBuilder()</code>.
    */
-  public Tweet() {
-  }
+  public Tweet() {}
 
   /**
    * All-args constructor.
@@ -165,9 +165,8 @@ public class Tweet extends org.apache.avro.specific.SpecificRecordBase
    * RecordBuilder for Tweet instances.
    */
   public static class Builder
-      extends org.apache.avro.specific.SpecificRecordBuilderBase<Tweet>
-      implements org.apache.avro.data.RecordBuilder<Tweet> {
-
+    extends org.apache.avro.specific.SpecificRecordBuilderBase<Tweet>
+    implements org.apache.avro.data.RecordBuilder<Tweet> {
     private CharSequence text;
 
     private CharSequence username;
@@ -337,11 +336,17 @@ public class Tweet extends org.apache.avro.specific.SpecificRecordBase
     public Tweet build() {
       try {
         Tweet record = new Tweet();
-        record.text = fieldSetFlags()[0] ? this.text
+        record.text =
+          fieldSetFlags()[0]
+            ? this.text
             : (CharSequence) defaultValue(fields()[0]);
-        record.username = fieldSetFlags()[1] ? this.username
+        record.username =
+          fieldSetFlags()[1]
+            ? this.username
             : (CharSequence) defaultValue(fields()[1]);
-        record.lang = fieldSetFlags()[2] ? this.lang
+        record.lang =
+          fieldSetFlags()[2]
+            ? this.lang
             : (CharSequence) defaultValue(fields()[2]);
         return record;
       } catch (Exception e) {
@@ -350,18 +355,19 @@ public class Tweet extends org.apache.avro.specific.SpecificRecordBase
     }
   }
 
-  private static final org.apache.avro.io.DatumWriter WRITER$ =
-      new org.apache.avro.specific.SpecificDatumWriter(
-          SCHEMA$);
+  private static final org.apache.avro.io.DatumWriter WRITER$ = new org.apache.avro.specific.SpecificDatumWriter(
+    SCHEMA$
+  );
 
   @Override
-  public void writeExternal(java.io.ObjectOutput out) throws java.io.IOException {
+  public void writeExternal(java.io.ObjectOutput out)
+    throws java.io.IOException {
     WRITER$.write(this, SpecificData.getEncoder(out));
   }
 
-  private static final org.apache.avro.io.DatumReader READER$ =
-      new org.apache.avro.specific.SpecificDatumReader(
-          SCHEMA$);
+  private static final org.apache.avro.io.DatumReader READER$ = new org.apache.avro.specific.SpecificDatumReader(
+    SCHEMA$
+  );
 
   @Override
   public void readExternal(java.io.ObjectInput in) throws java.io.IOException {
