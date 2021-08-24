@@ -2,24 +2,11 @@ package io.github.jeqo.talk;
 
 public class HelloRepresentation {
 
-	private String hello;
+  final String hello;
+  final String lang;
 
-	private String lang;
-
-	public String getHello() {
-		return hello;
-	}
-
-	public void setHello(String hello) {
-		this.hello = hello;
-	}
-
-	public String getLang() {
-		return lang;
-	}
-
-	public void setLang(String lang) {
-		this.lang = lang;
-	}
-
+  public HelloRepresentation(String hello, String lang) {
+    this.hello = hello;
+    this.lang = lang;
+  }
 }
